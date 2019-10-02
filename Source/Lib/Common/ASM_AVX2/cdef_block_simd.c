@@ -21,8 +21,6 @@
 
 #include "aom_dsp_rtcd.h"
 
-#define SIMD_FUNC(name) eb_##name##_avx2
-
 /* partial A is a 16-bit vector of the form:
 [x8 x7 x6 x5 x4 x3 x2 x1] and partial B has the form:
 [0  y1 y2 y3 y4 y5 y6 y7].
@@ -281,7 +279,7 @@ static INLINE void array_reverse_transpose_8x8(v128 *in, v128 *res) {
     res[0] = v128_ziphi_64(tr1_7, tr1_6);
 }
 
-int32_t SIMD_FUNC(cdef_find_dir)(const uint16_t *img, int32_t stride, int32_t *var,
+int32_t eb_cdef_find_dir_avx2(const uint16_t *img, int32_t stride, int32_t *var,
     int32_t coeff_shift) {
     int32_t i;
     int32_t cost[8];
@@ -364,7 +362,7 @@ SIMD_INLINE v256 constrain16(v256 a, v256 b, uint32_t threshold,
     return v256_xor(v256_add_16(sign, v256_min_s16(diff, s)), sign);
 }
 
-void SIMD_FUNC(cdef_filter_block_4x4_8)(uint8_t *dst, int32_t dstride,
+void eb_cdef_filter_block_4x4_8_avx2(uint8_t *dst, int32_t dstride,
     const uint16_t *in, int32_t pri_strength,
     int32_t sec_strength, int32_t dir,
     int32_t pri_damping, int32_t sec_damping,
@@ -665,7 +663,7 @@ void SIMD_FUNC(cdef_filter_block_4x4_8)(uint8_t *dst, int32_t dstride,
 
 }
 
-void SIMD_FUNC(cdef_filter_block_8x8_8)(uint8_t *dst, int32_t dstride,
+void eb_cdef_filter_block_8x8_8_avx2(uint8_t *dst, int32_t dstride,
     const uint16_t *in, int32_t pri_strength,
     int32_t sec_strength, int32_t dir,
     int32_t pri_damping, int32_t sec_damping,
@@ -919,7 +917,7 @@ void SIMD_FUNC(cdef_filter_block_8x8_8)(uint8_t *dst, int32_t dstride,
     }
 }
 
-void SIMD_FUNC(cdef_filter_block_4x4_16)(uint16_t *dst, int32_t dstride,
+void eb_cdef_filter_block_4x4_16_avx2(uint16_t *dst, int32_t dstride,
     const uint16_t *in, int32_t pri_strength,
     int32_t sec_strength, int32_t dir,
     int32_t pri_damping, int32_t sec_damping,
@@ -1218,7 +1216,7 @@ void SIMD_FUNC(cdef_filter_block_4x4_16)(uint16_t *dst, int32_t dstride,
 #endif
 }
 
-void SIMD_FUNC(cdef_filter_block_8x8_16)(uint16_t *dst, int32_t dstride,
+void eb_cdef_filter_block_8x8_16_avx2(uint16_t *dst, int32_t dstride,
     const uint16_t *in, int32_t pri_strength,
     int32_t sec_strength, int32_t dir,
     int32_t pri_damping, int32_t sec_damping,
@@ -1468,71 +1466,71 @@ void SIMD_FUNC(cdef_filter_block_8x8_16)(uint16_t *dst, int32_t dstride,
     }
 }
 
-void SIMD_FUNC(cdef_filter_block)(uint8_t *dst8, uint16_t *dst16, int32_t dstride,
+void eb_cdef_filter_block_avx2(uint8_t *dst8, uint16_t *dst16, int32_t dstride,
     const uint16_t *in, int32_t pri_strength,
     int32_t sec_strength, int32_t dir, int32_t pri_damping,
     int32_t sec_damping, int32_t bsize, int32_t max,
     int32_t coeff_shift) {
     if (dst8) {
         if (bsize == BLOCK_8X8) {
-            SIMD_FUNC(cdef_filter_block_8x8_8)
+            eb_cdef_filter_block_8x8_8_avx2
                 (dst8, dstride, in, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
         }
         else if (bsize == BLOCK_4X8) {
-            SIMD_FUNC(cdef_filter_block_4x4_8)
+            eb_cdef_filter_block_4x4_8_avx2
                 (dst8, dstride, in, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
-            SIMD_FUNC(cdef_filter_block_4x4_8)
+            eb_cdef_filter_block_4x4_8_avx2
                 (dst8 + 4 * dstride, dstride, in + 4 * CDEF_BSTRIDE, pri_strength,
                     sec_strength, dir, pri_damping, sec_damping, max, coeff_shift);
         }
         else if (bsize == BLOCK_8X4) {
-            SIMD_FUNC(cdef_filter_block_4x4_8)
+            eb_cdef_filter_block_4x4_8_avx2
                 (dst8, dstride, in, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
-            SIMD_FUNC(cdef_filter_block_4x4_8)
+            eb_cdef_filter_block_4x4_8_avx2
                 (dst8 + 4, dstride, in + 4, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
         }
         else {
-            SIMD_FUNC(cdef_filter_block_4x4_8)
+            eb_cdef_filter_block_4x4_8_avx2
                 (dst8, dstride, in, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
         }
     }
     else {
         if (bsize == BLOCK_8X8) {
-            SIMD_FUNC(cdef_filter_block_8x8_16)
+            eb_cdef_filter_block_8x8_16_avx2
                 (dst16, dstride, in, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
         }
         else if (bsize == BLOCK_4X8) {
-            SIMD_FUNC(cdef_filter_block_4x4_16)
+            eb_cdef_filter_block_4x4_16_avx2
                 (dst16, dstride, in, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
-            SIMD_FUNC(cdef_filter_block_4x4_16)
+            eb_cdef_filter_block_4x4_16_avx2
                 (dst16 + 4 * dstride, dstride, in + 4 * CDEF_BSTRIDE, pri_strength,
                     sec_strength, dir, pri_damping, sec_damping, max, coeff_shift);
         }
         else if (bsize == BLOCK_8X4) {
-            SIMD_FUNC(cdef_filter_block_4x4_16)
+            eb_cdef_filter_block_4x4_16_avx2
                 (dst16, dstride, in, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
-            SIMD_FUNC(cdef_filter_block_4x4_16)
+            eb_cdef_filter_block_4x4_16_avx2
                 (dst16 + 4, dstride, in + 4, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
         }
         else {
             assert(bsize == BLOCK_4X4);
-            SIMD_FUNC(cdef_filter_block_4x4_16)
+            eb_cdef_filter_block_4x4_16_avx2
                 (dst16, dstride, in, pri_strength, sec_strength, dir, pri_damping,
                     sec_damping, max, coeff_shift);
         }
     }
 }
 
-void SIMD_FUNC(copy_rect8_8bit_to_16bit)(uint16_t *dst, int32_t dstride,
+void eb_copy_rect8_8bit_to_16bit_avx2(uint16_t *dst, int32_t dstride,
     const uint8_t *src, int32_t sstride, int32_t v,
     int32_t h) {
     int32_t i, j;
@@ -1546,7 +1544,7 @@ void SIMD_FUNC(copy_rect8_8bit_to_16bit)(uint16_t *dst, int32_t dstride,
     }
 }
 
-void SIMD_FUNC(copy_rect8_16bit_to_16bit)(uint16_t *dst, int32_t dstride,
+void eb_copy_rect8_16bit_to_16bit_avx2(uint16_t *dst, int32_t dstride,
     const uint16_t *src, int32_t sstride,
     int32_t v, int32_t h) {
     int32_t i, j;
