@@ -145,7 +145,6 @@ class CDEFBlockTest : public ::testing::TestWithParam<cdef_dir_param_t> {
                               pri_damping,
                               sec_damping,
                               bsize_,
-                              0 /*Not used*/,
                               bd_ - 8);
                     cdef_tst_(bd_ == 8 ? (uint8_t *)dst_tst_ : 0,
                               dst_tst_,
@@ -157,7 +156,6 @@ class CDEFBlockTest : public ::testing::TestWithParam<cdef_dir_param_t> {
                               pri_damping,
                               sec_damping,
                               bsize_,
-                              0 /*not used*/,
                               bd_ - 8);
 
                     for (pos = 0; pos < max_pos; pos++) {
@@ -165,8 +163,8 @@ class CDEFBlockTest : public ::testing::TestWithParam<cdef_dir_param_t> {
                             << "Error: CDEFBlockTest, SIMD and C mismatch."
                             << std::endl
                             << "First error at " << pos % size_ << ","
-                            << pos / size_ << " (" << (int16_t)dst_ref_[pos]
-                            << " : " << (int16_t)dst_tst_[pos] << ") "
+                            << pos / size_ << " (" << dst_ref_[pos]
+                            << " : " << dst_tst_[pos] << ") "
                             << std::endl
                             << "pristrength: " << pri_strength << std::endl
                             << "pridamping: " << pri_damping << std::endl
