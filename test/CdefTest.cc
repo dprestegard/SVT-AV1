@@ -32,15 +32,30 @@
 #include "EbCdef.h"
 #include "util.h"
 #include "random.h"
+#include "EbUnitTestUtility.h"
 #include "EbUtility.h"
 
-using ::testing::make_tuple;
 using svt_av1_test_tool::SVTRandom;
+using ::testing::make_tuple;
 namespace {
+
+typedef void (*eb_cdef_filter_block_8x8_16_func)(
+    const uint16_t *const in, const int32_t pri_strength,
+    const int32_t sec_strength, const int32_t dir, int32_t pri_damping,
+    int32_t sec_damping, const int32_t coeff_shift, uint16_t *const dst,
+    const int32_t dstride);
+
+static const eb_cdef_filter_block_8x8_16_func
+    eb_cdef_filter_block_8x8_16_func_table[] = {
+        &eb_cdef_filter_block_8x8_16_avx2,
+#ifndef NON_AVX512_SUPPORT
+        &eb_cdef_filter_block_8x8_16_avx512
+#endif
+};
 
 using cdef_dir_param_t =
     ::testing::tuple<cdef_filter_block_func, cdef_filter_block_func, BlockSize,
-                     int, int>;
+                     int, int, eb_cdef_filter_block_8x8_16_func>;
 
 /**
  * @brief Unit test for eb_cdef_filter_block_avx2
@@ -78,6 +93,7 @@ class CDEFBlockTest : public ::testing::TestWithParam<cdef_dir_param_t> {
         bsize_ = TEST_GET_PARAM(2);
         boundary_ = TEST_GET_PARAM(3);
         bd_ = TEST_GET_PARAM(4);
+        eb_cdef_filter_block_8x8_16 = TEST_GET_PARAM(5);
 
         memset(dst_ref_, 0, sizeof(dst_ref_));
         memset(dst_tst_, 0, sizeof(dst_tst_));
@@ -163,9 +179,8 @@ class CDEFBlockTest : public ::testing::TestWithParam<cdef_dir_param_t> {
                             << "Error: CDEFBlockTest, SIMD and C mismatch."
                             << std::endl
                             << "First error at " << pos % size_ << ","
-                            << pos / size_ << " (" << dst_ref_[pos]
-                            << " : " << dst_tst_[pos] << ") "
-                            << std::endl
+                            << pos / size_ << " (" << dst_ref_[pos] << " : "
+                            << dst_tst_[pos] << ") " << std::endl
                             << "pristrength: " << pri_strength << std::endl
                             << "pridamping: " << pri_damping << std::endl
                             << "secstrength: " << sec_strength << std::endl
@@ -205,6 +220,107 @@ class CDEFBlockTest : public ::testing::TestWithParam<cdef_dir_param_t> {
         }
     }
 
+    void speed_cdef() {
+        const int min_damping = 3 + bd_ - 8;
+        const int pri_damping = min_damping;
+        const int sec_damping = min_damping;
+        int pri_strength, sec_strength;
+        int dir;
+        double time_c, time_o;
+        uint64_t start_time_seconds, start_time_useconds;
+        uint64_t middle_time_seconds, middle_time_useconds;
+        uint64_t finish_time_seconds, finish_time_useconds;
+        const uint64_t num_loop = 100;
+
+        prepare_data(0, 1);
+
+        EbStartTime(&start_time_seconds, &start_time_useconds);
+
+        for (uint64_t i = 0; i < num_loop; i++) {
+            for (dir = 0; dir < 8; dir++) {
+                // primary strength range between [0, 15], scale the range and
+                // step for high bitdepth; For example, 12-bit content can have
+                // strengths value of 0, 16, 32
+                for (pri_strength = 0; pri_strength <= 19 << (bd_ - 8);
+                     pri_strength += (1 + 4 * !!boundary_) << (bd_ - 8)) {
+                    if (pri_strength == 16)
+                        pri_strength = 19;
+                    /* second strength can only be 0, 1, 2, 4 for 8-bit */
+                    for (sec_strength = 0; sec_strength <= 4 << (bd_ - 8);
+                         sec_strength += 1 << (bd_ - 8)) {
+                        if (sec_strength == 3 << (bd_ - 8))
+                            continue;
+                        cdef_ref_(
+                            bd_ == 8 ? (uint8_t *)dst_ref_ : 0,
+                            dst_ref_,
+                            size_,
+                            src_ + CDEF_HBORDER + CDEF_VBORDER * CDEF_BSTRIDE,
+                            pri_strength,
+                            sec_strength,
+                            dir,
+                            pri_damping,
+                            sec_damping,
+                            bsize_,
+                            bd_ - 8);
+                    }
+                }
+            }
+        }
+
+        EbStartTime(&middle_time_seconds, &middle_time_useconds);
+
+        for (uint64_t i = 0; i < num_loop; i++) {
+            for (dir = 0; dir < 8; dir++) {
+                // primary strength range between [0, 15], scale the range and
+                // step for high bitdepth; For example, 12-bit content can have
+                // strengths value of 0, 16, 32
+                for (pri_strength = 0; pri_strength <= 19 << (bd_ - 8);
+                     pri_strength += (1 + 4 * !!boundary_) << (bd_ - 8)) {
+                    if (pri_strength == 16)
+                        pri_strength = 19;
+                    /* second strength can only be 0, 1, 2, 4 for 8-bit */
+                    for (sec_strength = 0; sec_strength <= 4 << (bd_ - 8);
+                         sec_strength += 1 << (bd_ - 8)) {
+                        if (sec_strength == 3 << (bd_ - 8))
+                            continue;
+                        cdef_tst_(
+                            bd_ == 8 ? (uint8_t *)dst_tst_ : 0,
+                            dst_tst_,
+                            size_,
+                            src_ + CDEF_HBORDER + CDEF_VBORDER * CDEF_BSTRIDE,
+                            pri_strength,
+                            sec_strength,
+                            dir,
+                            pri_damping,
+                            sec_damping,
+                            bsize_,
+                            bd_ - 8);
+                    }
+                }
+            }
+        }
+
+        EbStartTime(&finish_time_seconds, &finish_time_useconds);
+        EbComputeOverallElapsedTimeMs(start_time_seconds,
+                                      start_time_useconds,
+                                      middle_time_seconds,
+                                      middle_time_useconds,
+                                      &time_c);
+        EbComputeOverallElapsedTimeMs(middle_time_seconds,
+                                      middle_time_useconds,
+                                      finish_time_seconds,
+                                      finish_time_useconds,
+                                      &time_o);
+
+        printf("Average Nanoseconds per Function Call\n");
+        printf("    eb_cdef_filter_block_c()   : %6.2f\n",
+               1000000 * time_c / num_loop);
+        printf(
+            "    eb_cdef_filter_block_opt() : %6.2f   (Comparison: %5.2fx)\n",
+            1000000 * time_o / num_loop,
+            time_c / time_o);
+    }
+
   protected:
     int bsize_;
     int boundary_;
@@ -223,6 +339,10 @@ TEST_P(CDEFBlockTest, MatchTest) {
     test_cdef(1);
 }
 
+TEST_P(CDEFBlockTest, DISABLED_SpeedTest) {
+    speed_cdef();
+}
+
 // VS compiling for 32 bit targets does not support vector types in
 // structs as arguments, which makes the v256 type of the intrinsics
 // hard to support, so optimizations for this target are disabled.
@@ -230,11 +350,12 @@ TEST_P(CDEFBlockTest, MatchTest) {
 
 INSTANTIATE_TEST_CASE_P(
     Cdef, CDEFBlockTest,
-    ::testing::Combine(::testing::Values(&eb_cdef_filter_block_avx2),
-                       ::testing::Values(&eb_cdef_filter_block_c),
-                       ::testing::Values(BLOCK_4X4, BLOCK_4X8, BLOCK_8X4,
-                                         BLOCK_8X8),
-                       ::testing::Range(0, 16), ::testing::Range(8, 13, 2)));
+    ::testing::Combine(
+        ::testing::Values(&eb_cdef_filter_block_avx2),
+        ::testing::Values(&eb_cdef_filter_block_c),
+        ::testing::Values(BLOCK_4X4, BLOCK_4X8, BLOCK_8X4, BLOCK_8X8),
+        ::testing::Range(0, 16), ::testing::Range(8, 13, 2),
+        ::testing::ValuesIn(eb_cdef_filter_block_8x8_16_func_table)));
 
 #endif  // defined(_WIN64) || !defined(_MSC_VER)
 
@@ -481,8 +602,8 @@ TEST(CdefToolTest, ComputeCdefDist8bitMatchTest) {
         // prepare src data
         SVTRandom rnd_(bd, false);
         for (int i = 0; i < buf_size; ++i) {
-            src_data_[i] = rnd_.random()%255;
-            dst_data_[i] = rnd_.random()%255;
+            src_data_[i] = rnd_.random() % 255;
+            dst_data_[i] = rnd_.random() % 255;
         }
 
         const int coeff_shift = bd - 8;
@@ -508,14 +629,6 @@ TEST(CdefToolTest, ComputeCdefDist8bitMatchTest) {
             for (int i = 0; i < 4; ++i) {
                 for (int plane = 0; plane < 3; ++plane) {
                     const uint64_t c_mse = compute_cdef_dist_8bit_c(dst_data_,
-                                                               stride,
-                                                               src_data_,
-                                                               dlist,
-                                                               cdef_count,
-                                                               test_bs[i],
-                                                               coeff_shift,
-                                                               plane);
-                    const uint64_t avx_mse = compute_cdef_dist_8bit_avx2(dst_data_,
                                                                     stride,
                                                                     src_data_,
                                                                     dlist,
@@ -523,6 +636,15 @@ TEST(CdefToolTest, ComputeCdefDist8bitMatchTest) {
                                                                     test_bs[i],
                                                                     coeff_shift,
                                                                     plane);
+                    const uint64_t avx_mse =
+                        compute_cdef_dist_8bit_avx2(dst_data_,
+                                                    stride,
+                                                    src_data_,
+                                                    dlist,
+                                                    cdef_count,
+                                                    test_bs[i],
+                                                    coeff_shift,
+                                                    plane);
                     ASSERT_EQ(c_mse, avx_mse)
                         << "compute_cdef_dist_8bit_avx2 failed "
                         << "bitdepth: " << bd << " plane: " << plane

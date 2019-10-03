@@ -221,7 +221,7 @@ int32_t eb_cdef_find_dir_avx2(const uint16_t *img, int32_t stride, int32_t *var,
 }
 
 // sign(a-b) * min(abs(a-b), max(0, threshold - (abs(a-b) >> adjdamp)))
-SIMD_INLINE __m256i constrain16(const __m256i in0, const __m256i in1,
+static INLINE __m256i constrain16(const __m256i in0, const __m256i in1,
     const __m256i threshold,
     const uint32_t adjdamp) {
     const __m256i diff = _mm256_sub_epi16(in0, in1);
@@ -234,10 +234,9 @@ SIMD_INLINE __m256i constrain16(const __m256i in0, const __m256i in1,
     return _mm256_xor_si256(d, sign);
 }
 
-void eb_cdef_filter_block_4x4_8_avx2(uint8_t *dst, int32_t dstride,
-    const uint16_t *in, int32_t pri_strength,
-    int32_t sec_strength, int32_t dir,
-    int32_t pri_damping, int32_t sec_damping,
+static void eb_cdef_filter_block_4x4_8_avx2(
+    uint8_t *dst, int32_t dstride, const uint16_t *in, int32_t pri_strength,
+    int32_t sec_strength, int32_t dir, int32_t pri_damping, int32_t sec_damping,
     int32_t coeff_shift) {
     __m256i p0, p1, p2, p3, sum, row, res;
     __m256i max, min, large = _mm256_set1_epi16(CDEF_VERY_LARGE);
@@ -407,10 +406,9 @@ void eb_cdef_filter_block_4x4_8_avx2(uint8_t *dst, int32_t dstride,
     *(int32_t *)(dst + 3 * dstride) = _mm256_cvtsi256_si32(res);
 }
 
-void eb_cdef_filter_block_8x8_8_avx2(uint8_t *dst, int32_t dstride,
-    const uint16_t *in, int32_t pri_strength,
-    int32_t sec_strength, int32_t dir,
-    int32_t pri_damping, int32_t sec_damping,
+static void eb_cdef_filter_block_8x8_8_avx2(
+    uint8_t *dst, int32_t dstride, const uint16_t *in, int32_t pri_strength,
+    int32_t sec_strength, int32_t dir, int32_t pri_damping, int32_t sec_damping,
     int32_t coeff_shift) {
     int32_t i;
     __m256i sum, p0, p1, p2, p3, row, res;
@@ -571,10 +569,9 @@ void eb_cdef_filter_block_8x8_8_avx2(uint8_t *dst, int32_t dstride,
     }
 }
 
-void eb_cdef_filter_block_4x4_16_avx2(uint16_t *dst, int32_t dstride,
-    const uint16_t *in, int32_t pri_strength,
-    int32_t sec_strength, int32_t dir,
-    int32_t pri_damping, int32_t sec_damping,
+static void eb_cdef_filter_block_4x4_16_avx2(
+    uint16_t *dst, int32_t dstride, const uint16_t *in, int32_t pri_strength,
+    int32_t sec_strength, int32_t dir, int32_t pri_damping, int32_t sec_damping,
     int32_t coeff_shift) {
     __m256i p0, p1, p2, p3, sum, row, res;
     __m256i max, min, large = _mm256_set1_epi16(CDEF_VERY_LARGE);
@@ -742,7 +739,7 @@ void eb_cdef_filter_block_4x4_16_avx2(uint16_t *dst, int32_t dstride,
     *(uint64_t *)(dst + 3 * dstride) = _mm256_extract_epi64(res, 0);
 }
 
-static INLINE void cdef_filter_block_8x8_16_first_avx2(
+static INLINE void cdef_filter_block_8x8_16_pri_avx2(
     const uint16_t *const in, const int32_t pri_damping, const int32_t po,
     const __m256i row, const __m256i pri_strength_256, const __m256i pri_taps,
     __m256i *const max, __m256i *const min, __m256i *const sum) {
@@ -764,7 +761,7 @@ static INLINE void cdef_filter_block_8x8_16_first_avx2(
         *sum, _mm256_mullo_epi16(pri_taps, _mm256_add_epi16(q0, q1)));
 }
 
-static INLINE void cdef_filter_block_8x8_16_second_avx2(
+static INLINE void cdef_filter_block_8x8_16_sec_avx2(
     const uint16_t *const in, const int32_t sec_damping, const int32_t so1,
     const int32_t so2, const __m256i row, const __m256i sec_strength_256,
     const __m256i sec_taps, __m256i *const max, __m256i *const min,
@@ -831,14 +828,15 @@ void eb_cdef_filter_block_8x8_16_avx2(
         sec_damping = AOMMAX(0, sec_damping - get_msb(sec_strength));
 
     for (i = 0; i < 8; i += 2) {
-        const __m256i row = loadu_u16_8x2_avx2(in + i * CDEF_BSTRIDE, CDEF_BSTRIDE);
+        const __m256i row =
+            loadu_u16_8x2_avx2(in + i * CDEF_BSTRIDE, CDEF_BSTRIDE);
         __m256i sum, res, max, min;
 
         min = max = row;
         sum = _mm256_setzero_si256();
 
         // Primary near taps
-        cdef_filter_block_8x8_16_first_avx2(in + i * CDEF_BSTRIDE,
+        cdef_filter_block_8x8_16_pri_avx2(in + i * CDEF_BSTRIDE,
             pri_damping,
             po1,
             row,
@@ -849,7 +847,7 @@ void eb_cdef_filter_block_8x8_16_avx2(
             &sum);
 
         // Primary far taps
-        cdef_filter_block_8x8_16_first_avx2(in + i * CDEF_BSTRIDE,
+        cdef_filter_block_8x8_16_pri_avx2(in + i * CDEF_BSTRIDE,
             pri_damping,
             po2,
             row,
@@ -860,7 +858,7 @@ void eb_cdef_filter_block_8x8_16_avx2(
             &sum);
 
         // Secondary near taps
-        cdef_filter_block_8x8_16_second_avx2(in + i * CDEF_BSTRIDE,
+        cdef_filter_block_8x8_16_sec_avx2(in + i * CDEF_BSTRIDE,
             sec_damping,
             s1o1,
             s2o1,
@@ -872,7 +870,7 @@ void eb_cdef_filter_block_8x8_16_avx2(
             &sum);
 
         // Secondary far taps
-        cdef_filter_block_8x8_16_second_avx2(in + i * CDEF_BSTRIDE,
+        cdef_filter_block_8x8_16_sec_avx2(in + i * CDEF_BSTRIDE,
             sec_damping,
             s1o2,
             s2o2,
@@ -968,7 +966,7 @@ void eb_cdef_filter_block_avx2(uint8_t *dst8, uint16_t *dst16, int32_t dstride,
     }
     else {
         if (bsize == BLOCK_8X8) {
-            eb_cdef_filter_block_8x8_16_avx2(in,
+            eb_cdef_filter_block_8x8_16(in,
                 pri_strength,
                 sec_strength,
                 dir,
