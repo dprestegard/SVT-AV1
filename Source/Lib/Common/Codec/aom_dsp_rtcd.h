@@ -482,6 +482,7 @@ extern "C" {
 
     uint64_t search_one_dual_c(int *lev0, int *lev1, int nb_strengths, uint64_t(**mse)[64], int sb_count, int fast, int start_gi, int end_gi);
     uint64_t search_one_dual_avx2(int *lev0, int *lev1, int nb_strengths, uint64_t(**mse)[64], int sb_count, int fast, int start_gi, int end_gi);
+    uint64_t search_one_dual_avx512(int *lev0, int *lev1, int nb_strengths, uint64_t(**mse)[64], int sb_count, int fast, int start_gi, int end_gi);
     RTCD_EXTERN uint64_t(*search_one_dual)(int *lev0, int *lev1, int nb_strengths, uint64_t(**mse)[64], int sb_count, int fast, int start_gi, int end_gi);
 
     uint32_t eb_aom_mse16x16_c(const uint8_t *src_ptr, int32_t  source_stride, const uint8_t *ref_ptr, int32_t  recon_stride, uint32_t *sse);
@@ -2779,7 +2780,6 @@ extern "C" {
         if (flags & HAS_AVX2) get_proj_subspace = get_proj_subspace_avx2;
 
         search_one_dual = search_one_dual_c;
-        if (flags & HAS_AVX2) search_one_dual = search_one_dual_avx2;
 
         eb_aom_mse16x16 = eb_aom_mse16x16_c;
         if (flags & HAS_AVX2) eb_aom_mse16x16 = eb_aom_mse16x16_avx2;
@@ -2863,6 +2863,7 @@ extern "C" {
         eb_av1_inv_txfm2d_add_64x32 = eb_av1_inv_txfm2d_add_64x32_avx512;
         eb_av1_inv_txfm2d_add_16x32 = eb_av1_inv_txfm2d_add_16x32_avx512;
         eb_av1_inv_txfm2d_add_32x16 = eb_av1_inv_txfm2d_add_32x16_avx512;
+        search_one_dual = search_one_dual_avx512;
     }
 #else
         if (flags & HAS_AVX2) eb_av1_inv_txfm2d_add_16x16 = eb_av1_inv_txfm2d_add_16x16_avx2;
@@ -2874,6 +2875,7 @@ extern "C" {
         if (flags & HAS_AVX2) eb_av1_inv_txfm2d_add_64x32 = eb_av1_highbd_inv_txfm_add_avx2;
         if (flags & HAS_AVX2) eb_av1_inv_txfm2d_add_16x32 = eb_av1_highbd_inv_txfm_add_avx2;
         if (flags & HAS_AVX2) eb_av1_inv_txfm2d_add_32x16 = eb_av1_highbd_inv_txfm_add_avx2;
+        if (flags & HAS_AVX2) search_one_dual = search_one_dual_avx2;
 
 #endif
         eb_av1_inv_txfm_add = eb_av1_inv_txfm_add_c;

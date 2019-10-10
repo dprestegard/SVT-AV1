@@ -57,14 +57,12 @@ uint64_t search_one_dual_avx2(int *lev0, int *lev1, int nb_strengths,
     //assert(~total_strengths % 4);
     for (int j = start_gi; j < total_strengths; ++j) { // process by 4x4
         tmp = _mm256_set1_epi64x(mse[0][i][j]);
-        for (int k = 0; k < total_strengths; k += 4) {
+        for (int k = start_gi; k < total_strengths; k += 4) {
         v_mse = _mm256_loadu_si256((const __m256i*)&mse[1][i][k]);
         v_tot = _mm256_loadu_si256((const __m256i*)&tot_mse[j][k]);
         curr = _mm256_add_epi64(tmp, v_mse);
-        mask = _mm256_cmpgt_epi64(best_mse_, curr);
-        v_tot = _mm256_add_epi64(v_tot, _mm256_or_si256(
-          _mm256_andnot_si256(mask, best_mse_),
-          _mm256_and_si256(mask, curr)));
+        mask = _mm256_min_epi64(best_mse_, curr);
+        v_tot = _mm256_add_epi64(v_tot, mask);
         _mm256_storeu_si256((__m256i*)&tot_mse[j][k], v_tot);
       }
     }

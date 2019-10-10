@@ -35,8 +35,8 @@
 #include "EbUnitTestUtility.h"
 #include "EbUtility.h"
 
-using svt_av1_test_tool::SVTRandom;
 using ::testing::make_tuple;
+using svt_av1_test_tool::SVTRandom;
 namespace {
 
 typedef void (*eb_cdef_filter_block_8x8_16_func)(
@@ -47,9 +47,9 @@ typedef void (*eb_cdef_filter_block_8x8_16_func)(
 
 static const eb_cdef_filter_block_8x8_16_func
     eb_cdef_filter_block_8x8_16_func_table[] = {
-        &eb_cdef_filter_block_8x8_16_avx2,
+        eb_cdef_filter_block_8x8_16_avx2,
 #ifndef NON_AVX512_SUPPORT
-        &eb_cdef_filter_block_8x8_16_avx512
+        eb_cdef_filter_block_8x8_16_avx512
 #endif
 };
 
@@ -669,10 +669,22 @@ TEST(CdefToolTest, ComputeCdefDist8bitMatchTest) {
  *
  * Test coverage:
  * Test cases:
- * nb_strength: [0 2)
+ * nb_strength: [0 8)
  * end_gi: TOTAL_STRENGTHS
  *
  */
+
+typedef uint64_t (*search_one_dual_func)(int *lev0, int *lev1, int nb_strengths,
+                                         uint64_t (**mse)[64], int sb_count,
+                                         int fast, int start_gi, int end_gi);
+
+static const search_one_dual_func search_one_dual_func_table[] = {
+    search_one_dual_avx2,
+#ifndef NON_AVX512_SUPPORT
+    search_one_dual_avx512
+#endif
+};
+
 TEST(CdefToolTest, SearchOneDualMatchTest) {
     // setup enviroment
     const int sb_count = 100;
@@ -694,7 +706,7 @@ TEST(CdefToolTest, SearchOneDualMatchTest) {
                     mse[i][n][j] = rnd_.random();
 
         // try different nb_strengths
-        for (int i = 0; i < 2; ++i) {
+        for (int i = 0; i <= 3; ++i) {
             memset(lvl_luma_ref, 0, sizeof(lvl_luma_ref));
             memset(lvl_chroma_ref, 0, sizeof(lvl_chroma_ref));
             memset(lvl_luma_tst, 0, sizeof(lvl_luma_tst));
@@ -710,7 +722,95 @@ TEST(CdefToolTest, SearchOneDualMatchTest) {
                                                           fast,
                                                           start_gi,
                                                           end_gi);
-                uint64_t best_mse_tst = search_one_dual_avx2(lvl_luma_tst,
+                for (int l = 0; l < sizeof(search_one_dual_func_table) /
+                                        sizeof(*search_one_dual_func_table);
+                     ++l) {
+                    uint64_t best_mse_tst =
+                        search_one_dual_func_table[l](lvl_luma_tst,
+                                                      lvl_chroma_tst,
+                                                      j,
+                                                      mse,
+                                                      sb_count,
+                                                      fast,
+                                                      start_gi,
+                                                      end_gi);
+
+                    ASSERT_EQ(best_mse_tst, best_mse_ref)
+                        << "search_one_dual_avx2 return different best mse "
+                        << "loop: " << k << " nb_strength: " << nb_strengths;
+                    for (int h = 0; h < CDEF_MAX_STRENGTHS; ++h) {
+                        ASSERT_EQ(lvl_luma_ref[h], lvl_luma_tst[h])
+                            << "best strength for luma does not match "
+                            << "loop: " << k << " nb_strength: " << nb_strengths
+                            << " pos " << h;
+                        ASSERT_EQ(lvl_chroma_ref[h], lvl_chroma_tst[h])
+                            << "best strength for chroma does not match "
+                            << "loop: " << k << " nb_strength: " << nb_strengths
+                            << " pos " << h;
+                    }
+                }
+            }
+        }
+    }
+
+    eb_aom_free(mse[0]);
+    eb_aom_free(mse[1]);
+}
+
+TEST(CdefToolTest, DISABLED_SearchOneDualSpeedTest) {
+    // setup enviroment
+    const int sb_count = 100;
+    const int fast = 0;  // unused
+    const int start_gi = 0;
+    const int end_gi = TOTAL_STRENGTHS;
+    const int nb_strengths = 8;
+    int lvl_luma_ref[CDEF_MAX_STRENGTHS], lvl_chroma_ref[CDEF_MAX_STRENGTHS];
+    int lvl_luma_tst[CDEF_MAX_STRENGTHS], lvl_chroma_tst[CDEF_MAX_STRENGTHS];
+    uint64_t(*mse[2])[TOTAL_STRENGTHS];
+    mse[0] = (uint64_t(*)[64])eb_aom_memalign(32, sizeof(**mse) * sb_count);
+    mse[1] = (uint64_t(*)[64])eb_aom_memalign(32, sizeof(**mse) * sb_count);
+
+    SVTRandom rnd_(10, false);
+
+    // generate mse randomly
+    for (int i = 0; i < 2; ++i)
+        for (int n = 0; n < sb_count; ++n)
+            for (int j = 0; j < 64; ++j)
+                mse[i][n][j] = rnd_.random();
+
+    // try different nb_strengths
+    memset(lvl_luma_ref, 0, sizeof(lvl_luma_ref));
+    memset(lvl_chroma_ref, 0, sizeof(lvl_chroma_ref));
+    memset(lvl_luma_tst, 0, sizeof(lvl_luma_tst));
+    memset(lvl_chroma_tst, 0, sizeof(lvl_chroma_tst));
+
+    for (int i = 0; i < sizeof(search_one_dual_func_table) /
+                            sizeof(*search_one_dual_func_table);
+         ++i) {
+        for (int j = 0; j < nb_strengths; ++j) {
+            uint64_t best_mse_ref, best_mse_tst;
+            double time_c, time_o;
+            uint64_t start_time_seconds, start_time_useconds;
+            uint64_t middle_time_seconds, middle_time_useconds;
+            uint64_t finish_time_seconds, finish_time_useconds;
+            const uint64_t num_loop = 10000;
+            EbStartTime(&start_time_seconds, &start_time_useconds);
+
+            for (uint64_t k = 0; k < num_loop; k++) {
+                best_mse_ref = search_one_dual_c(lvl_luma_ref,
+                                                 lvl_chroma_ref,
+                                                 j,
+                                                 mse,
+                                                 sb_count,
+                                                 fast,
+                                                 start_gi,
+                                                 end_gi);
+            }
+
+            EbStartTime(&middle_time_seconds, &middle_time_useconds);
+
+            for (uint64_t k = 0; k < num_loop; k++) {
+                best_mse_tst = search_one_dual_func_table[i](lvl_luma_tst,
                                                              lvl_chroma_tst,
                                                              j,
                                                              mse,
@@ -718,21 +818,43 @@ TEST(CdefToolTest, SearchOneDualMatchTest) {
                                                              fast,
                                                              start_gi,
                                                              end_gi);
-
-                ASSERT_EQ(best_mse_tst, best_mse_ref)
-                    << "search_one_dual_avx2 return different best mse "
-                    << "loop: " << k << " nb_strength: " << nb_strengths;
-                for (int h = 0; h < CDEF_MAX_STRENGTHS; ++h) {
-                    ASSERT_EQ(lvl_luma_ref[h], lvl_luma_tst[h])
-                        << "best strength for luma does not match "
-                        << "loop: " << k << " nb_strength: " << nb_strengths
-                        << " pos " << h;
-                    ASSERT_EQ(lvl_chroma_ref[h], lvl_chroma_tst[h])
-                        << "best strength for chroma does not match "
-                        << "loop: " << k << " nb_strength: " << nb_strengths
-                        << " pos " << h;
-                }
             }
+
+            EbStartTime(&finish_time_seconds, &finish_time_useconds);
+
+            ASSERT_EQ(best_mse_tst, best_mse_ref)
+                << "search_one_dual_avx2 return different best mse "
+                << " nb_strength: " << nb_strengths;
+            for (int h = 0; h < CDEF_MAX_STRENGTHS; ++h) {
+                ASSERT_EQ(lvl_luma_ref[h], lvl_luma_tst[h])
+                    << "best strength for luma does not match "
+                    << " nb_strength: " << nb_strengths << " pos " << h;
+                ASSERT_EQ(lvl_chroma_ref[h], lvl_chroma_tst[h])
+                    << "best strength for chroma does not match "
+                    << " nb_strength: " << nb_strengths << " pos " << h;
+            }
+
+            EbComputeOverallElapsedTimeMs(start_time_seconds,
+                                          start_time_useconds,
+                                          middle_time_seconds,
+                                          middle_time_useconds,
+                                          &time_c);
+            EbComputeOverallElapsedTimeMs(middle_time_seconds,
+                                          middle_time_useconds,
+                                          finish_time_seconds,
+                                          finish_time_useconds,
+                                          &time_o);
+
+            printf("Average Nanoseconds per Function Call\n");
+            printf("    search_one_dual_c()       : %6.2f\n",
+                   1000000 * time_c / num_loop);
+            printf(
+                "    search_one_dual_opt(%d, %d) : %6.2f   (Comparison: "
+                "%5.2fx)\n",
+                i,
+                j,
+                1000000 * time_o / num_loop,
+                time_c / time_o);
         }
     }
 
