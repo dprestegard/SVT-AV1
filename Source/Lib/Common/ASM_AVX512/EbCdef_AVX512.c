@@ -19,7 +19,7 @@ uint64_t search_one_dual_avx512(int *lev0, int *lev1, int nb_strengths,
     int32_t best_id0 = 0;
     int32_t best_id1 = 0;
     int32_t i, j;
-    DECLARE_ALIGNED(32, uint64_t, tot_mse[TOTAL_STRENGTHS][TOTAL_STRENGTHS]);
+    DECLARE_ALIGNED(64, uint64_t, tot_mse[TOTAL_STRENGTHS][TOTAL_STRENGTHS]);
 
     (void)fast;
 
