@@ -3310,7 +3310,33 @@ void sad_loop_kernel_avx2_intrin(
 /*******************************************************************************
 * Requirement: height % 4 = 0
 *******************************************************************************/
-uint32_t compute4x_m_sad_avx2_intrin(
+SIMD_INLINE uint32_t compute4x_m_sad_avx2(
+    const uint8_t  *src,   // input parameter, source samples Ptr
+    uint32_t  src_stride,  // input parameter, source stride
+    const uint8_t  *ref,   // input parameter, reference samples Ptr
+    uint32_t  ref_stride,  // input parameter, reference stride
+    uint32_t  height)      // input parameter, block height (M)
+{
+    uint32_t y = height;
+    __m128i xmm0;
+    __m256i ymm = _mm256_setzero_si256();
+
+    do {
+        const __m256i src0123 = load_u8_4x4_avx2(src, src_stride);
+        const __m256i ref0123 = load_u8_4x4_avx2(ref, ref_stride);
+        ymm = _mm256_add_epi32(ymm, _mm256_sad_epu8(src0123, ref0123));
+        src += src_stride << 2;
+        ref += ref_stride << 2;
+        y -= 4;
+    } while (y);
+
+    xmm0 = _mm_add_epi32(_mm256_castsi256_si128(ymm),
+        _mm256_extracti128_si256(ymm, 1));
+
+    return (uint32_t)_mm_cvtsi128_si32(xmm0);
+}
+
+uint32_t eb_compute4x_m_sad_avx2_intrin(
     const uint8_t  *src,   // input parameter, source samples Ptr
     uint32_t  src_stride,  // input parameter, source stride
     const uint8_t  *ref,   // input parameter, reference samples Ptr
@@ -3318,23 +3344,17 @@ uint32_t compute4x_m_sad_avx2_intrin(
     uint32_t  height,     // input parameter, block height (M)
     uint32_t  width)      // input parameter, block width (N)
 {
-    __m128i xmm0;
-    __m256i ymm = _mm256_setzero_si256();
-    uint32_t y;
     (void)width;
+    return compute4x_m_sad_avx2(src, src_stride, ref, ref_stride, height);
+}
 
-    for (y = 0; y < height; y += 4) {
-        const __m256i src0123 = load_u8_4x4_avx2(src, src_stride);
-        const __m256i ref0123 = load_u8_4x4_avx2(ref, ref_stride);
-        ymm = _mm256_add_epi32(ymm, _mm256_sad_epu8(src0123, ref0123));
-        src += src_stride << 2;
-        ref += ref_stride << 2;
-    }
-
-    xmm0 = _mm_add_epi32(_mm256_castsi256_si128(ymm),
-        _mm256_extracti128_si256(ymm, 1));
-
-    return (uint32_t)_mm_cvtsi128_si32(xmm0);
+static INLINE uint32_t sad_final_avx2(const __m256i sad) {
+    const __m128i sad_lo = _mm256_castsi256_si128(sad);
+    const __m128i sad_hi = _mm256_extracti128_si256(sad, 1);
+    const __m128i sum = _mm_add_epi32(sad_lo, sad_hi);
+    const __m128i sum_hi = _mm_srli_si128(sum, 8);
+    const __m128i d = _mm_add_epi32(sum, sum_hi);
+    return (uint32_t)_mm_cvtsi128_si32(d);
 }
 
 /*******************************************************************************
@@ -3345,27 +3365,21 @@ SIMD_INLINE uint32_t compute8x_m_sad_avx2(
     uint32_t  src_stride,  // input parameter, source stride
     const uint8_t  *ref,   // input parameter, reference samples Ptr
     uint32_t  ref_stride,  // input parameter, reference stride
-    uint32_t  height,     // input parameter, block height (M)
-    uint32_t  width)      // input parameter, block width (N)
+    uint32_t  height)      // input parameter, block height (M)
 {
-    __m128i xmm0;
-    __m256i ymm = _mm256_setzero_si256();
-    uint32_t y;
-    (void)width;
+    uint32_t y = height;
+    __m256i sad = _mm256_setzero_si256();
 
-    for (y = 0; y < height; y += 4) {
+    do {
         const __m256i src0123 = load_u8_8x4_avx2(src, src_stride);
         const __m256i ref0123 = load_u8_8x4_avx2(ref, ref_stride);
-        ymm = _mm256_add_epi32(ymm, _mm256_sad_epu8(src0123, ref0123));
+        sad = _mm256_add_epi32(sad, _mm256_sad_epu8(src0123, ref0123));
         src += src_stride << 2;
         ref += ref_stride << 2;
-    }
+        y -= 4;
+    } while (y);
 
-    xmm0 = _mm_add_epi32(_mm256_castsi256_si128(ymm),
-        _mm256_extracti128_si256(ymm, 1));
-    xmm0 = _mm_add_epi32(xmm0, _mm_srli_si128(xmm0, 8));
-
-    return (uint32_t)_mm_cvtsi128_si32(xmm0);
+    return sad_final_avx2(sad);
 }
 
 uint32_t eb_compute8x_m_sad_avx2_intrin(
@@ -3376,66 +3390,27 @@ uint32_t eb_compute8x_m_sad_avx2_intrin(
     uint32_t  height,     // input parameter, block height (M)
     uint32_t  width)      // input parameter, block width (N)
 {
-    return compute8x_m_sad_avx2(src, src_stride, ref, ref_stride, height, width);
-}
-
-SIMD_INLINE uint32_t compute4xMSadSub_avx2(
-    const uint8_t  *src,  // input parameter, source samples Ptr
-    uint32_t  src_stride, // input parameter, source stride
-    const uint8_t  *ref,  // input parameter, reference samples Ptr
-    uint32_t  refStride,  // input parameter, reference stride
-    uint32_t  height,     // input parameter, block height (M)
-    uint32_t  width)      // input parameter, block width (N)
-{
-    uint32_t y;
-    uint32_t hsteps = height >> 2;
     (void)width;
-    assert(height % 4 == 0);
-
-    __m256i mm256_sad = _mm256_setzero_si256();
-    __m256i mm256_src;
-    __m256i mm256_ref;
-
-    for (y = 0; y < hsteps; y++) {
-        mm256_src = _mm256_setr_epi32(*(uint32_t*)src,
-            *(uint32_t*)(src + 1 * src_stride),
-            *(uint32_t*)(src + 2 * src_stride),
-            *(uint32_t*)(src + 3 * src_stride),
-            0, 0, 0, 0);
-
-        mm256_ref = _mm256_setr_epi32(*(uint32_t*)ref,
-            *(uint32_t*)(ref + 1 * refStride),
-            *(uint32_t*)(ref + 2 * refStride),
-            *(uint32_t*)(ref + 3 * refStride),
-            0, 0, 0, 0);
-
-        mm256_sad = _mm256_add_epi16(mm256_sad,
-            _mm256_sad_epu8(mm256_src, mm256_ref));
-
-        src += src_stride * 4;
-        ref += refStride * 4;
-    }
-    return _mm256_extract_epi32(mm256_sad, 0) + _mm256_extract_epi32(mm256_sad, 2);
+    return compute8x_m_sad_avx2(src, src_stride, ref, ref_stride, height);
 }
 
-uint32_t eb_compute4xMSadSub_avx2_intrin(
-    const uint8_t  *src,  // input parameter, source samples Ptr
-    uint32_t  src_stride, // input parameter, source stride
-    const uint8_t  *ref,  // input parameter, reference samples Ptr
-    uint32_t  refStride,  // input parameter, reference stride
-    uint32_t  height,     // input parameter, block height (M)
-    uint32_t  width)      // input parameter, block width (N)
-{
-    return compute4xMSadSub_avx2(src, src_stride, ref, refStride, height, width);
-}
-
-static INLINE __m256i Compute16x2Sad_Kernel(const uint8_t *const src,
+static INLINE void compute16_sad_avx2(const uint8_t *const src,
     const uint32_t src_stride, const uint8_t *const ref,
-    const uint32_t ref_stride, const __m256i ymm)
+    const uint32_t ref_stride, __m256i *const sum)
 {
-    const __m256i src01 = loadu_u8_16x2_avx2(src, src_stride);
-    const __m256i ref01 = loadu_u8_16x2_avx2(ref, ref_stride);
-    return _mm256_add_epi32(ymm, _mm256_sad_epu8(src01, ref01));
+    const __m256i s = loadu_u8_16x2_avx2(src, src_stride);
+    const __m256i r = loadu_u8_16x2_avx2(ref, ref_stride);
+    const __m256i sad = _mm256_sad_epu8(s, r);
+    *sum = _mm256_add_epi32(*sum, sad);
+}
+
+static INLINE void compute32_sad_avx2(const uint8_t *const src,
+    const uint8_t *const ref, __m256i *const sum)
+{
+    const __m256i s = _mm256_loadu_si256((__m256i *)src);
+    const __m256i r = _mm256_loadu_si256((__m256i *)ref);
+    const __m256i sad = _mm256_sad_epu8(s, r);
+    *sum = _mm256_add_epi32(*sum, sad);
 }
 
 /*******************************************************************************
@@ -3446,28 +3421,22 @@ SIMD_INLINE uint32_t compute16x_m_sad_avx2(
     uint32_t  src_stride,  // input parameter, source stride
     const uint8_t  *ref,        // input parameter, reference samples Ptr
     uint32_t  ref_stride,  // input parameter, reference stride
-    uint32_t  height,     // input parameter, block height (M)
-    uint32_t  width)      // input parameter, block width (N)
+    uint32_t  height)      // input parameter, block height (M)
 {
-    __m128i xmm0;
-    __m256i ymm = _mm256_setzero_si256();
-    uint32_t y;
-    (void)width;
+    uint32_t y = height;
+    __m256i sad = _mm256_setzero_si256();
 
-    for (y = 0; y < height; y += 4) {
-        ymm = Compute16x2Sad_Kernel(src + 0 * src_stride, src_stride,
-            ref + 0 * ref_stride, ref_stride, ymm);
-        ymm = Compute16x2Sad_Kernel(src + 2 * src_stride, src_stride,
-            ref + 2 * ref_stride, ref_stride, ymm);
+    do {
+        compute16_sad_avx2(src + 0 * src_stride, src_stride,
+            ref + 0 * ref_stride, ref_stride, &sad);
+        compute16_sad_avx2(src + 2 * src_stride, src_stride,
+            ref + 2 * ref_stride, ref_stride, &sad);
         src += src_stride << 2;
         ref += ref_stride << 2;
-    }
+        y -= 4;
+    } while (y);
 
-    xmm0 = _mm_add_epi32(_mm256_castsi256_si128(ymm),
-        _mm256_extracti128_si256(ymm, 1));
-    xmm0 = _mm_add_epi32(xmm0, _mm_srli_si128(xmm0, 8));
-
-    return (uint32_t)_mm_cvtsi128_si32(xmm0);
+    return sad_final_avx2(sad);
 }
 
 uint32_t eb_compute16x_m_sad_avx2_intrin(
@@ -3478,13 +3447,14 @@ uint32_t eb_compute16x_m_sad_avx2_intrin(
     uint32_t  height,     // input parameter, block height (M)
     uint32_t  width)      // input parameter, block width (N)
 {
-    return compute16x_m_sad_avx2(src, src_stride, ref, ref_stride, height, width);
+    (void)width;
+    return compute16x_m_sad_avx2(src, src_stride, ref, ref_stride, height);
 }
 
 /*******************************************************************************
 * Requirement: height % 2 = 0
 *******************************************************************************/
-uint32_t compute24x_m_sad_avx2_intrin(
+uint32_t eb_compute24x_m_sad_avx2_intrin(
     const uint8_t  *src,        // input parameter, source samples Ptr
     uint32_t  src_stride,  // input parameter, source stride
     const uint8_t  *ref,        // input parameter, reference samples Ptr
@@ -3492,22 +3462,25 @@ uint32_t compute24x_m_sad_avx2_intrin(
     uint32_t  height,     // input parameter, block height (M)
     uint32_t  width)     // input parameter, block width (N)
 {
-    __m128i xmm0, xmm1;
-    __m256i ymm0, ymm1;
-    uint32_t y;
+    uint32_t y = height;
+    __m256i sad = _mm256_setzero_si256();
+
     (void)width;
 
-    ymm0 = ymm1 = _mm256_setzero_si256();
-    for (y = 0; y < height; y += 2) {
-        ymm0 = _mm256_add_epi32(ymm0, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)src), _mm256_loadu_si256((__m256i *)ref)));
-        ymm1 = _mm256_add_epi32(ymm1, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)(src + src_stride)), _mm256_loadu_si256((__m256i *)(ref + ref_stride))));
+    do {
+        compute32_sad_avx2(src + 0 * src_stride, ref + 0 * ref_stride, &sad);
+        compute32_sad_avx2(src + 1 * src_stride, ref + 1 * ref_stride, &sad);
         src += src_stride << 1;
         ref += ref_stride << 1;
-    }
-    xmm0 = _mm_add_epi32(_mm256_castsi256_si128(ymm0), _mm256_castsi256_si128(ymm1));
-    xmm1 = _mm_add_epi32(_mm256_extracti128_si256(ymm0, 1), _mm256_extracti128_si256(ymm1, 1));
-    xmm0 = _mm_add_epi32(_mm_add_epi32(xmm0, _mm_srli_si128(xmm0, 8)), xmm1);
-    return (uint32_t)_mm_cvtsi128_si32(xmm0);
+        y -= 2;
+    } while (y);
+
+    const __m128i sad_lo = _mm256_castsi256_si128(sad);
+    const __m128i sad_hi = _mm256_extracti128_si256(sad, 1);
+    const __m128i sum_lo = _mm_add_epi32(sad_lo, _mm_srli_si128(sad_lo, 8));
+    const __m128i sum = _mm_add_epi32(sum_lo, sad_hi);
+
+    return (uint32_t)_mm_cvtsi128_si32(sum);
 }
 
 /*******************************************************************************
@@ -3518,25 +3491,20 @@ static INLINE uint32_t compute32x_m_sad_avx2(
     uint32_t  src_stride,  // input parameter, source stride
     const uint8_t  *ref,   // input parameter, reference samples Ptr
     uint32_t  ref_stride,  // input parameter, reference stride
-    uint32_t  height,     // input parameter, block height (M)
-    uint32_t  width)     // input parameter, block width (N)
+    uint32_t  height)     // input parameter, block height (M)
 {
-    __m128i xmm0;
-    __m256i ymm0, ymm1;
-    uint32_t y;
-    (void)width;
+    uint32_t y = height;
+    __m256i sad = _mm256_setzero_si256();
 
-    ymm0 = ymm1 = _mm256_setzero_si256();
-    for (y = 0; y < height; y += 2) {
-        ymm0 = _mm256_add_epi32(ymm0, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)src), _mm256_loadu_si256((__m256i *)ref)));
-        ymm1 = _mm256_add_epi32(ymm1, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)(src + src_stride)), _mm256_loadu_si256((__m256i *)(ref + ref_stride))));
+    do {
+        compute32_sad_avx2(src + 0 * src_stride, ref + 0 * ref_stride, &sad);
+        compute32_sad_avx2(src + 1 * src_stride, ref + 1 * ref_stride, &sad);
         src += src_stride << 1;
         ref += ref_stride << 1;
-    }
-    ymm0 = _mm256_add_epi32(ymm0, ymm1);
-    xmm0 = _mm_add_epi32(_mm256_castsi256_si128(ymm0), _mm256_extracti128_si256(ymm0, 1));
-    xmm0 = _mm_add_epi32(xmm0, _mm_srli_si128(xmm0, 8));
-    return (uint32_t) /*xmm0.m128i_i64[0];*/ _mm_cvtsi128_si32(xmm0);
+        y -= 2;
+    } while (y);
+
+    return sad_final_avx2(sad);
 }
 
 uint32_t eb_compute32x_m_sad_avx2_intrin(
@@ -3547,13 +3515,14 @@ uint32_t eb_compute32x_m_sad_avx2_intrin(
     uint32_t  height,      // input parameter, block height (M)
     uint32_t  width)       // input parameter, block width (N)
 {
-    return compute32x_m_sad_avx2(src, src_stride, ref, ref_stride, height, width);
+    (void)width;
+    return compute32x_m_sad_avx2(src, src_stride, ref, ref_stride, height);
 }
 
 /*******************************************************************************
 * Requirement: height % 2 = 0
 *******************************************************************************/
-uint32_t compute48x_m_sad_avx2_intrin(
+uint32_t eb_compute48x_m_sad_avx2_intrin(
     const uint8_t  *src,   // input parameter, source samples Ptr
     uint32_t  src_stride,  // input parameter, source stride
     const uint8_t  *ref,   // input parameter, reference samples Ptr
@@ -3561,26 +3530,21 @@ uint32_t compute48x_m_sad_avx2_intrin(
     uint32_t  height,     // input parameter, block height (M)
     uint32_t  width)     // input parameter, block width (N)
 {
-    __m128i xmm0, xmm1;
-    __m256i ymm0, ymm1;
-    uint32_t y;
+    uint32_t y = height;
+    __m256i sad = _mm256_setzero_si256();
+
     (void)width;
 
-    ymm0 = ymm1 = _mm256_setzero_si256();
-    xmm0 = xmm1 = _mm_setzero_si128();
-    for (y = 0; y < height; y += 2) {
-        ymm0 = _mm256_add_epi32(ymm0, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)src), _mm256_loadu_si256((__m256i*)ref)));
-        xmm0 = _mm_add_epi32(xmm0, _mm_sad_epu8(_mm_loadu_si128((__m128i*)(src + 32)), _mm_loadu_si128((__m128i*)(ref + 32))));
-        ymm1 = _mm256_add_epi32(ymm1, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)(src + src_stride)), _mm256_loadu_si256((__m256i*)(ref + ref_stride))));
-        xmm1 = _mm_add_epi32(xmm1, _mm_sad_epu8(_mm_loadu_si128((__m128i*)(src + src_stride + 32)), _mm_loadu_si128((__m128i*)(ref + ref_stride + 32))));
+    do {
+        compute32_sad_avx2(src + 0 * src_stride, ref + 0 * ref_stride, &sad);
+        compute32_sad_avx2(src + 1 * src_stride, ref + 1 * ref_stride, &sad);
+        compute16_sad_avx2(src + 32, src_stride, ref + 32, ref_stride, &sad);
         src += src_stride << 1;
         ref += ref_stride << 1;
-    }
-    ymm0 = _mm256_add_epi32(ymm0, ymm1);
-    xmm0 = _mm_add_epi32(xmm0, xmm1);
-    xmm0 = _mm_add_epi32(xmm0, _mm_add_epi32(_mm256_castsi256_si128(ymm0), _mm256_extracti128_si256(ymm0, 1)));
-    xmm0 = _mm_add_epi32(xmm0, _mm_srli_si128(xmm0, 8));
-    return _mm_extract_epi32(xmm0, 0);
+        y -= 2;
+    } while (y);
+
+    return sad_final_avx2(sad);
 }
 
 /*******************************************************************************
@@ -3591,27 +3555,44 @@ SIMD_INLINE uint32_t compute64x_m_sad_avx2(
     uint32_t  src_stride,  // input parameter, source stride
     const uint8_t  *ref,   // input parameter, reference samples Ptr
     uint32_t  ref_stride,  // input parameter, reference stride
-    uint32_t  height,      // input parameter, block height (M)
-    uint32_t  width)       // input parameter, block width (N)
+    uint32_t  height)      // input parameter, block height (M)
 {
-    __m128i xmm0;
-    __m256i ymm0, ymm1, ymm2, ymm3;
-    uint32_t y;
-    (void)width;
+    uint32_t y = height;
+    __m256i sad = _mm256_setzero_si256();
 
-    ymm0 = ymm1 = ymm2 = ymm3 = _mm256_setzero_si256();
-    for (y = 0; y < height; y += 2) {
-        ymm0 = _mm256_add_epi32(ymm0, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)src), _mm256_loadu_si256((__m256i*)ref)));
-        ymm1 = _mm256_add_epi32(ymm1, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)(src + 32)), _mm256_loadu_si256((__m256i*)(ref + 32))));
-        ymm2 = _mm256_add_epi32(ymm2, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)(src + src_stride)), _mm256_loadu_si256((__m256i*)(ref + ref_stride))));
-        ymm3 = _mm256_add_epi32(ymm3, _mm256_sad_epu8(_mm256_loadu_si256((__m256i*)(src + src_stride + 32)), _mm256_loadu_si256((__m256i*)(ref + ref_stride + 32))));
+    do {
+        compute32_sad_avx2(src, ref, &sad);
+        compute32_sad_avx2(src + 32, ref + 32, &sad);
+        compute32_sad_avx2(src + src_stride, ref + ref_stride, &sad);
+        compute32_sad_avx2(src + src_stride + 32, ref + ref_stride + 32, &sad);
         src += src_stride << 1;
         ref += ref_stride << 1;
-    }
-    ymm0 = _mm256_add_epi32(_mm256_add_epi32(ymm0, ymm1), _mm256_add_epi32(ymm2, ymm3));
-    xmm0 = _mm_add_epi32(_mm256_castsi256_si128(ymm0), _mm256_extracti128_si256(ymm0, 1));
-    xmm0 = _mm_add_epi32(xmm0, _mm_srli_si128(xmm0, 8));
-    return _mm_extract_epi32(xmm0, 0);
+        y -= 2;
+    } while (y);
+
+    return sad_final_avx2(sad);
+}
+
+SIMD_INLINE uint32_t compute128x_m_sad_avx2(
+    const uint8_t  *src,   // input parameter, source samples Ptr
+    uint32_t  src_stride,  // input parameter, source stride
+    const uint8_t  *ref,   // input parameter, reference samples Ptr
+    uint32_t  ref_stride,  // input parameter, reference stride
+    uint32_t  height)      // input parameter, block height (M)
+{
+    uint32_t y = height;
+    __m256i sad = _mm256_setzero_si256();
+
+    do {
+        compute32_sad_avx2(src + 0 * 32, ref + 0 * 32, &sad);
+        compute32_sad_avx2(src + 1 * 32, ref + 1 * 32, &sad);
+        compute32_sad_avx2(src + 2 * 32, ref + 2 * 32, &sad);
+        compute32_sad_avx2(src + 3 * 32, ref + 3 * 32, &sad);
+        src += src_stride;
+        ref += ref_stride;
+    } while (--y);
+
+    return sad_final_avx2(sad);
 }
 
 uint32_t eb_compute64x_m_sad_avx2_intrin(
@@ -3622,7 +3603,8 @@ uint32_t eb_compute64x_m_sad_avx2_intrin(
     uint32_t  height,      // input parameter, block height (M)
     uint32_t  width)       // input parameter, block width (N)
 {
-    return compute64x_m_sad_avx2(src, src_stride, ref, ref_stride, height, width);
+    (void)width;
+    return compute64x_m_sad_avx2(src, src_stride, ref, ref_stride, height);
 }
 
 static INLINE void sad_eight_8x2x2_avx2(const uint8_t *src,
@@ -4917,143 +4899,108 @@ void sad_loop_kernel_avx2_hme_l0_intrin(
 
 uint32_t eb_aom_sad4x4_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute4xMSadSub_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 4, 4);
+    return compute4x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 4);
 }
 
 uint32_t eb_aom_sad4x8_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute4xMSadSub_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 8, 4);
+    return compute4x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 8);
 }
 
 uint32_t eb_aom_sad4x16_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute4xMSadSub_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 16, 4);
+    return compute4x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 16);
 }
 
 uint32_t eb_aom_sad8x4_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute8x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 4, 8);
+    return compute8x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 4);
 }
 
 uint32_t eb_aom_sad8x8_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute8x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 8, 8);
+    return compute8x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 8);
 }
 
 uint32_t eb_aom_sad8x16_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute8x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 16, 8);
+    return compute8x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 16);
 }
 
 uint32_t eb_aom_sad8x32_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute8x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 32, 8);
+    return compute8x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 32);
 }
 
 uint32_t eb_aom_sad16x4_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 4, 16);
+    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 4);
 }
 
 uint32_t eb_aom_sad16x8_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 8, 16);
+    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 8);
 }
 
 uint32_t eb_aom_sad16x16_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 16, 16);
+    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 16);
 }
 
 uint32_t eb_aom_sad16x32_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 32, 16);
+    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 32);
 }
 
 uint32_t eb_aom_sad16x64_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 64, 16);
+    return compute16x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 64);
 }
 
 uint32_t eb_aom_sad32x8_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute32x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 8, 32);
+    return compute32x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 8);
 }
 
 uint32_t eb_aom_sad32x16_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute32x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 16, 32);
+    return compute32x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 16);
 }
 
 uint32_t eb_aom_sad32x32_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute32x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 32, 32);
+    return compute32x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 32);
 }
 
 uint32_t eb_aom_sad32x64_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute32x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 64, 32);
+    return compute32x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 64);
 }
 
 uint32_t eb_aom_sad64x16_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute64x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 16, 64);
+    return compute64x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 16);
 }
 
 uint32_t eb_aom_sad64x32_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute64x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 32, 64);
+    return compute64x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 32);
 }
 
 uint32_t eb_aom_sad64x64_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return compute64x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 64, 64);
-}
-
-SIMD_INLINE uint32_t sad128x64_avx2(const uint8_t *src_ptr, int src_stride,
-    const uint8_t *ref_ptr, int ref_stride) {
-    unsigned int half_width = 64;
-    uint32_t sum = compute64x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 64, 64);
-    src_ptr += half_width;
-    ref_ptr += half_width;
-    sum += compute64x_m_sad_avx2(src_ptr, src_stride, ref_ptr,
-        ref_stride, 64, 64);
-    return sum;
+    return compute64x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 64);
 }
 
 uint32_t eb_aom_sad128x64_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    return sad128x64_avx2(src_ptr, src_stride, ref_ptr, ref_stride);
+    return compute128x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride, 64);
 }
 
 uint32_t eb_aom_sad128x128_avx2(const uint8_t *src_ptr, int src_stride,
     const uint8_t *ref_ptr, int ref_stride) {
-    uint32_t sum = sad128x64_avx2(src_ptr, src_stride,
-        ref_ptr, ref_stride);
-    src_ptr += src_stride << 6;
-    ref_ptr += ref_stride << 6;
-    sum += sad128x64_avx2(src_ptr, src_stride, ref_ptr, ref_stride);
-    return sum;
+    return compute128x_m_sad_avx2(src_ptr, src_stride, ref_ptr, ref_stride,
+        128);
 }
 
 SIMD_INLINE void eb_aom_sad4xhx4d_calc_avx2(

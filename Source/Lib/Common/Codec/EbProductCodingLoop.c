@@ -7891,7 +7891,7 @@ static EbSadKernelNxMType FUNC_TABLE compute4x4SAD_funcPtrArray[ASM_TYPE_TOTAL] 
     // C_DEFAULT
     Compute4x4SAD_Kernel,
     // SSE2
-    compute4x_m_sad_avx2_intrin,
+    eb_compute4x_m_sad_avx2_intrin,
 };
 
 static uint32_t tab4x4[256] = {
