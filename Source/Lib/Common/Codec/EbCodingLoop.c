@@ -112,7 +112,7 @@ void residual_kernel(
             area_width,
             area_height);
     } else {
-        ResidualKernel(
+        residual_kernel8bit(
             &(input[input_offset]),
             input_stride,
             &(pred[pred_offset]),
@@ -495,7 +495,7 @@ static void Av1EncodeLoop(
     //**********************************
     if (component_mask == PICTURE_BUFFER_DESC_FULL_MASK || component_mask == PICTURE_BUFFER_DESC_LUMA_MASK)
     {
-        ResidualKernel(
+        residual_kernel8bit(
             input_samples->buffer_y + input_luma_offset,
             input_samples->stride_y,
             predSamples->buffer_y + pred_luma_offset,
@@ -704,7 +704,7 @@ static void Av1EncodeLoop(
         // Cb
         //**********************************
 
-        ResidualKernel(
+        residual_kernel8bit(
             input_samples->buffer_cb + input_cb_offset,
             input_samples->stride_cb,
             predSamples->buffer_cb + pred_cb_offset,
@@ -714,7 +714,7 @@ static void Av1EncodeLoop(
             context_ptr->blk_geom->tx_width_uv[cu_ptr->tx_depth][context_ptr->txb_itr],
             context_ptr->blk_geom->tx_height_uv[cu_ptr->tx_depth][context_ptr->txb_itr]);
 
-        ResidualKernel(
+        residual_kernel8bit(
             input_samples->buffer_cr + input_cr_offset,
             input_samples->stride_cr,
             predSamples->buffer_cr + pred_cr_offset,

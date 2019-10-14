@@ -2612,9 +2612,10 @@ extern "C" {
     void highbd_variance64_avx2(const uint8_t *a8, int32_t a_stride, const uint8_t *b8, int32_t b_stride, int32_t w, int32_t h, uint64_t *sse);
     RTCD_EXTERN void (*highbd_variance64)(const uint8_t *a8, int32_t a_stride, const uint8_t *b8, int32_t b_stride, int32_t w, int32_t h, uint64_t *sse);
 
-    void residual_kernel_c(uint8_t *input, uint32_t input_stride, uint8_t *pred, uint32_t pred_stride, int16_t *residual, uint32_t residual_stride, uint32_t area_width, uint32_t area_height);
-    void ResidualKernel_avx2(uint8_t *input, uint32_t input_stride, uint8_t *pred, uint32_t pred_stride, int16_t *residual, uint32_t residual_stride, uint32_t area_width, uint32_t area_height);
-    RTCD_EXTERN void(*ResidualKernel)(uint8_t *input, uint32_t input_stride, uint8_t *pred, uint32_t pred_stride, int16_t *residual, uint32_t residual_stride, uint32_t area_width, uint32_t area_height);
+    void residual_kernel8bit_c(uint8_t *input, uint32_t input_stride, uint8_t *pred, uint32_t pred_stride, int16_t *residual, uint32_t residual_stride, uint32_t area_width, uint32_t area_height);
+    void residual_kernel8bit_avx2(uint8_t *input, uint32_t input_stride, uint8_t *pred, uint32_t pred_stride, int16_t *residual, uint32_t residual_stride, uint32_t area_width, uint32_t area_height);
+    void residual_kernel8bit_avx512(uint8_t *input, uint32_t input_stride, uint8_t *pred, uint32_t pred_stride, int16_t *residual, uint32_t residual_stride, uint32_t area_width, uint32_t area_height);
+    RTCD_EXTERN void(*residual_kernel8bit)(uint8_t *input, uint32_t input_stride, uint8_t *pred, uint32_t pred_stride, int16_t *residual, uint32_t residual_stride, uint32_t area_width, uint32_t area_height);
 
     void eb_av1_txb_init_levels_c(const TranLow *const coeff, const int32_t width, const int32_t height, uint8_t *const levels);
     void eb_av1_txb_init_levels_avx2(const TranLow *const coeff, const int32_t width, const int32_t height, uint8_t *const levels);
@@ -2957,8 +2958,6 @@ extern "C" {
         //av1_get_nz_map_contexts = eb_av1_get_nz_map_contexts_c;
         /*if (flags & HAS_SSE2)*/ eb_av1_get_nz_map_contexts = eb_av1_get_nz_map_contexts_sse2;
 
-        ResidualKernel = residual_kernel_c;
-        if (flags & HAS_AVX2) ResidualKernel = ResidualKernel_avx2;
 #if II_COMP_FLAG
         aom_blend_a64_mask = aom_blend_a64_mask_c;
         if (flags & HAS_SSE4_1) aom_blend_a64_mask = aom_blend_a64_mask_sse4_1;
@@ -3501,6 +3500,7 @@ extern "C" {
         eb_aom_sad128x128x4d = eb_aom_sad128x128x4d_avx512;
         eb_aom_sad128x64 = eb_aom_sad128x64_avx512;
         eb_aom_sad128x64x4d = eb_aom_sad128x64x4d_avx512;
+        residual_kernel8bit = residual_kernel8bit_avx512;
 #else
         eb_aom_sad64x128 = eb_aom_sad64x128_c;
         if (flags & HAS_AVX2) eb_aom_sad64x128 = eb_aom_sad64x128_avx2;
@@ -3518,6 +3518,8 @@ extern "C" {
         if (flags & HAS_AVX2) eb_aom_sad128x64 = eb_aom_sad128x64_avx2;
         eb_aom_sad128x64x4d = eb_aom_sad128x64x4d_c;
         if (flags & HAS_AVX2) eb_aom_sad128x64x4d = eb_aom_sad128x64x4d_avx2;
+        residual_kernel8bit = residual_kernel8bit_c;
+        if (flags & HAS_AVX2) residual_kernel8bit = residual_kernel8bit_avx2;
 #endif // !NON_AVX512_SUPPORT
 
 //VARIANCE

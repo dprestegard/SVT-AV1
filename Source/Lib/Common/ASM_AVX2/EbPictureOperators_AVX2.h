@@ -8,11 +8,96 @@
 
 #include <immintrin.h>
 #include "EbDefinitions.h"
+#include "EbMemory_AVX2.h"
 #include "EbPictureOperators_SSE2.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    SIMD_INLINE void residual_kernel4_avx2(
+        const uint8_t *input, const uint32_t input_stride, const uint8_t *pred,
+        const uint32_t pred_stride, int16_t *residual,
+        const uint32_t residual_stride, const uint32_t area_height)
+    {
+        const __m256i zero = _mm256_setzero_si256();
+        uint32_t y = area_height;
+
+        do {
+            const __m256i in = load_u8_4x4_avx2(input, input_stride);
+            const __m256i pr = load_u8_4x4_avx2(pred, pred_stride);
+            const __m256i in_lo = _mm256_unpacklo_epi8(in, zero);
+            const __m256i pr_lo = _mm256_unpacklo_epi8(pr, zero);
+            const __m256i re_lo = _mm256_sub_epi16(in_lo, pr_lo);
+            const __m128i r0 = _mm256_castsi256_si128(re_lo);
+            const __m128i r1 = _mm256_extracti128_si256(re_lo, 1);
+
+            store_s16_4x2_sse2(r0, residual + 0 * residual_stride, residual_stride);
+            store_s16_4x2_sse2(r1, residual + 2 * residual_stride, residual_stride);
+
+            input += 4 * input_stride;
+            pred += 4 * pred_stride;
+            residual += 4 * residual_stride;
+            y -= 4;
+        } while (y);
+    }
+
+    SIMD_INLINE void residual_kernel8_avx2(
+        const uint8_t *input, const uint32_t input_stride, const uint8_t *pred,
+        const uint32_t pred_stride, int16_t *residual,
+        const uint32_t residual_stride, const uint32_t area_height)
+    {
+        const __m256i zero = _mm256_setzero_si256();
+        uint32_t y = area_height;
+
+        do {
+            const __m256i in = load_u8_8x4_avx2(input, input_stride);
+            const __m256i pr = load_u8_8x4_avx2(pred, pred_stride);
+            const __m256i in_lo = _mm256_unpacklo_epi8(in, zero);
+            const __m256i in_hi = _mm256_unpackhi_epi8(in, zero);
+            const __m256i pr_lo = _mm256_unpacklo_epi8(pr, zero);
+            const __m256i pr_hi = _mm256_unpackhi_epi8(pr, zero);
+            const __m256i r0 = _mm256_sub_epi16(in_lo, pr_lo);
+            const __m256i r1 = _mm256_sub_epi16(in_hi, pr_hi);
+
+            storeu_s16_8x2_avx2(r0, residual + 0 * residual_stride, 2 * residual_stride);
+            storeu_s16_8x2_avx2(r1, residual + 1 * residual_stride, 2 * residual_stride);
+
+            input += 4 * input_stride;
+            pred += 4 * pred_stride;
+            residual += 4 * residual_stride;
+            y -= 4;
+        } while (y);
+    }
+
+    SIMD_INLINE void residual_kernel16_avx2(
+        const uint8_t *input, const uint32_t input_stride, const uint8_t *pred,
+        const uint32_t pred_stride, int16_t *residual,
+        const uint32_t residual_stride, const uint32_t area_height)
+    {
+        const __m256i zero = _mm256_setzero_si256();
+        uint32_t y = area_height;
+
+        do {
+            const __m256i in0 = loadu_u8_16x2_avx2(input, input_stride);
+            const __m256i pr0 = loadu_u8_16x2_avx2(pred, pred_stride);
+            const __m256i in1 = _mm256_permute4x64_epi64(in0, 0xD8);
+            const __m256i pr1 = _mm256_permute4x64_epi64(pr0, 0xD8);
+            const __m256i in_lo = _mm256_unpacklo_epi8(in1, zero);
+            const __m256i in_hi = _mm256_unpackhi_epi8(in1, zero);
+            const __m256i pr_lo = _mm256_unpacklo_epi8(pr1, zero);
+            const __m256i pr_hi = _mm256_unpackhi_epi8(pr1, zero);
+            const __m256i re_lo = _mm256_sub_epi16(in_lo, pr_lo);
+            const __m256i re_hi = _mm256_sub_epi16(in_hi, pr_hi);
+
+            _mm256_storeu_si256((__m256i*)(residual + 0 * residual_stride), re_lo);
+            _mm256_storeu_si256((__m256i*)(residual + 1 * residual_stride), re_hi);
+            input += 2 * input_stride;
+            pred += 2 * pred_stride;
+            residual += 2 * residual_stride;
+            y -= 2;
+        } while (y);
+    }
 
     static INLINE void Distortion_AVX2_INTRIN(const __m256i input,
         const __m256i recon, __m256i *const sum) {
