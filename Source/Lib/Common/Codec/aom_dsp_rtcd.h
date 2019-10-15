@@ -169,6 +169,11 @@ extern "C" {
     void eb_apply_selfguided_restoration_avx2(const uint8_t *dat, int32_t width, int32_t height, int32_t stride, int32_t eps, const int32_t *xqd, uint8_t *dst, int32_t dst_stride, int32_t *tmpbuf, int32_t bit_depth, int32_t highbd);
     RTCD_EXTERN void(*eb_apply_selfguided_restoration)(const uint8_t *dat, int32_t width, int32_t height, int32_t stride, int32_t eps, const int32_t *xqd, uint8_t *dst, int32_t dst_stride, int32_t *tmpbuf, int32_t bit_depth, int32_t highbd);
 
+    uint32_t combined_averaging_ssd_c(uint8_t *src, ptrdiff_t src_stride, uint8_t *ref1, ptrdiff_t ref1_stride, uint8_t *ref2, ptrdiff_t ref2_stride, uint32_t height, uint32_t width);
+    uint32_t combined_averaging_ssd_avx2(uint8_t *src, ptrdiff_t src_stride, uint8_t *ref1, ptrdiff_t ref1_stride, uint8_t *ref2, ptrdiff_t ref2_stride, uint32_t height, uint32_t width);
+    uint32_t combined_averaging_ssd_avx512(uint8_t *src, ptrdiff_t src_stride, uint8_t *ref1, ptrdiff_t ref1_stride, uint8_t *ref2, ptrdiff_t ref2_stride, uint32_t height, uint32_t width);
+    RTCD_EXTERN uint32_t (*combined_averaging_ssd)(uint8_t *src, ptrdiff_t src_stride, uint8_t *ref1, ptrdiff_t ref1_stride, uint8_t *ref2, ptrdiff_t ref2_stride, uint32_t height, uint32_t width);
+
     void eb_av1_wiener_convolve_add_src_c(const uint8_t *src, ptrdiff_t src_stride, uint8_t *dst, ptrdiff_t dst_stride, const int16_t *filter_x, int32_t x_step_q4, const int16_t *filter_y, int32_t y_step_q4, int32_t w, int32_t h, const ConvolveParams *conv_params);
     void eb_av1_wiener_convolve_add_src_avx2(const uint8_t *src, ptrdiff_t src_stride, uint8_t *dst, ptrdiff_t dst_stride, const int16_t *filter_x, int32_t x_step_q4, const int16_t *filter_y, int32_t y_step_q4, int32_t w, int32_t h, const ConvolveParams *conv_params);
     RTCD_EXTERN void(*eb_av1_wiener_convolve_add_src)(const uint8_t *src, ptrdiff_t src_stride, uint8_t *dst, ptrdiff_t dst_stride, const int16_t *filter_x, int32_t x_step_q4, const int16_t *filter_y, int32_t y_step_q4, int32_t w, int32_t h, const ConvolveParams *conv_params);
@@ -2675,6 +2680,9 @@ extern "C" {
         eb_apply_selfguided_restoration = eb_apply_selfguided_restoration_c;
         if (flags & HAS_AVX2) eb_apply_selfguided_restoration = eb_apply_selfguided_restoration_avx2;
 
+        combined_averaging_ssd = combined_averaging_ssd_c;
+        if (flags & HAS_AVX2) combined_averaging_ssd = combined_averaging_ssd_avx2;
+
         eb_av1_wiener_convolve_add_src = eb_av1_wiener_convolve_add_src_c;
         if (flags & HAS_AVX2) eb_av1_wiener_convolve_add_src = eb_av1_wiener_convolve_add_src_avx2;
 
@@ -2722,6 +2730,7 @@ extern "C" {
         if (flags & HAS_AVX2) eb_av1_compute_stats_highbd = eb_av1_compute_stats_highbd_avx2;
 #ifndef NON_AVX512_SUPPORT
         if (CanUseIntelAVX512()) {
+            combined_averaging_ssd = combined_averaging_ssd_avx512;
             eb_av1_compute_stats = eb_av1_compute_stats_avx512;
             eb_av1_compute_stats_highbd = eb_av1_compute_stats_highbd_avx512;
             spatial_full_distortion_kernel_func_ptr_array[ASM_AVX2] = spatial_full_distortion_kernel_avx512;

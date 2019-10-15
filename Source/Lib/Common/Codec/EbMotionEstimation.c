@@ -7438,7 +7438,7 @@ static void PU_QuarterPelRefinementOnTheFly(
 
             dist =
                 (context_ptr->fractional_search_method == SSD_SEARCH)
-                    ? combined_averaging_ssd_func_ptr_array[asm_type](
+                    ? combined_averaging_ssd(
                           &(context_ptr->sb_buffer[puLcuBufferIndex]),
                           BLOCK_SIZE_64,
                           buf1[0] + searchRegionIndex1,
@@ -7504,7 +7504,7 @@ static void PU_QuarterPelRefinementOnTheFly(
                                  (int32_t)buf2Stride[1] * (int32_t)ySearchIndex;
             dist =
                 (context_ptr->fractional_search_method == SSD_SEARCH)
-                    ? combined_averaging_ssd_func_ptr_array[asm_type](
+                    ? combined_averaging_ssd(
                           &(context_ptr->sb_buffer[puLcuBufferIndex]),
                           BLOCK_SIZE_64,
                           buf1[1] + searchRegionIndex1,
@@ -7570,7 +7570,7 @@ static void PU_QuarterPelRefinementOnTheFly(
                                  (int32_t)buf2Stride[2] * (int32_t)ySearchIndex;
             dist =
                 (context_ptr->fractional_search_method == SSD_SEARCH)
-                    ? combined_averaging_ssd_func_ptr_array[asm_type](
+                    ? combined_averaging_ssd(
                           &(context_ptr->sb_buffer[puLcuBufferIndex]),
                           BLOCK_SIZE_64,
                           buf1[2] + searchRegionIndex1,
@@ -7636,7 +7636,7 @@ static void PU_QuarterPelRefinementOnTheFly(
                                  (int32_t)buf2Stride[3] * (int32_t)ySearchIndex;
             dist =
                 (context_ptr->fractional_search_method == SSD_SEARCH)
-                    ? combined_averaging_ssd_func_ptr_array[asm_type](
+                    ? combined_averaging_ssd(
                           &(context_ptr->sb_buffer[puLcuBufferIndex]),
                           BLOCK_SIZE_64,
                           buf1[3] + searchRegionIndex1,
@@ -7702,7 +7702,7 @@ static void PU_QuarterPelRefinementOnTheFly(
                                  (int32_t)buf2Stride[4] * (int32_t)ySearchIndex;
             dist =
                 (context_ptr->fractional_search_method == SSD_SEARCH)
-                    ? combined_averaging_ssd_func_ptr_array[asm_type](
+                    ? combined_averaging_ssd(
                           &(context_ptr->sb_buffer[puLcuBufferIndex]),
                           BLOCK_SIZE_64,
                           buf1[4] + searchRegionIndex1,
@@ -7768,7 +7768,7 @@ static void PU_QuarterPelRefinementOnTheFly(
                                  (int32_t)buf2Stride[5] * (int32_t)ySearchIndex;
             dist =
                 (context_ptr->fractional_search_method == SSD_SEARCH)
-                    ? combined_averaging_ssd_func_ptr_array[asm_type](
+                    ? combined_averaging_ssd(
                           &(context_ptr->sb_buffer[puLcuBufferIndex]),
                           BLOCK_SIZE_64,
                           buf1[5] + searchRegionIndex1,
@@ -7834,7 +7834,7 @@ static void PU_QuarterPelRefinementOnTheFly(
                                  (int32_t)buf2Stride[6] * (int32_t)ySearchIndex;
             dist =
                 (context_ptr->fractional_search_method == SSD_SEARCH)
-                    ? combined_averaging_ssd_func_ptr_array[asm_type](
+                    ? combined_averaging_ssd(
                           &(context_ptr->sb_buffer[puLcuBufferIndex]),
                           BLOCK_SIZE_64,
                           buf1[6] + searchRegionIndex1,
@@ -7900,7 +7900,7 @@ static void PU_QuarterPelRefinementOnTheFly(
                                  (int32_t)buf2Stride[7] * (int32_t)ySearchIndex;
             dist =
                 (context_ptr->fractional_search_method == SSD_SEARCH)
-                    ? combined_averaging_ssd_func_ptr_array[asm_type](
+                    ? combined_averaging_ssd(
                           &(context_ptr->sb_buffer[puLcuBufferIndex]),
                           BLOCK_SIZE_64,
                           buf1[7] + searchRegionIndex1,
@@ -9110,7 +9110,7 @@ static void quarter_pel_refinemnet_block(
     search_region_Index2 = (int32_t)search_Index_x +
                            (int32_t)buf2_stride[0] * (int32_t)search_Index_y;
     dist = (context_ptr->fractional_search_method == SSD_SEARCH)
-               ? combined_averaging_ssd_func_ptr_array[asm_type](
+               ? combined_averaging_ssd(
                      &(context_ptr->sb_buffer[src_block_index]),
                      BLOCK_SIZE_64,
                      buf1[0] + search_region_Index1,
@@ -9171,7 +9171,7 @@ static void quarter_pel_refinemnet_block(
     search_region_Index2 = (int32_t)search_Index_x +
                            (int32_t)buf2_stride[1] * (int32_t)search_Index_y;
     dist = (context_ptr->fractional_search_method == SSD_SEARCH)
-               ? combined_averaging_ssd_func_ptr_array[asm_type](
+               ? combined_averaging_ssd(
                      &(context_ptr->sb_buffer[src_block_index]),
                      BLOCK_SIZE_64,
                      buf1[1] + search_region_Index1,
@@ -9232,7 +9232,7 @@ static void quarter_pel_refinemnet_block(
     search_region_Index2 = (int32_t)search_Index_x +
                            (int32_t)buf2_stride[2] * (int32_t)search_Index_y;
     dist = (context_ptr->fractional_search_method == SSD_SEARCH)
-               ? combined_averaging_ssd_func_ptr_array[asm_type](
+               ? combined_averaging_ssd(
                      &(context_ptr->sb_buffer[src_block_index]),
                      BLOCK_SIZE_64,
                      buf1[2] + search_region_Index1,
@@ -9293,7 +9293,7 @@ static void quarter_pel_refinemnet_block(
     search_region_Index2 = (int32_t)search_Index_x +
                            (int32_t)buf2_stride[3] * (int32_t)search_Index_y;
     dist = (context_ptr->fractional_search_method == SSD_SEARCH)
-               ? combined_averaging_ssd_func_ptr_array[asm_type](
+               ? combined_averaging_ssd(
                      &(context_ptr->sb_buffer[src_block_index]),
                      BLOCK_SIZE_64,
                      buf1[3] + search_region_Index1,
@@ -9359,7 +9359,7 @@ static void quarter_pel_refinemnet_block(
             (int32_t)search_Index_x +
             (int32_t)buf2_stride[4] * (int32_t)search_Index_y;
         dist = (context_ptr->fractional_search_method == SSD_SEARCH)
-                   ? combined_averaging_ssd_func_ptr_array[asm_type](
+                   ? combined_averaging_ssd(
                          &(context_ptr->sb_buffer[src_block_index]),
                          BLOCK_SIZE_64,
                          buf1[4] + search_region_Index1,
@@ -9421,7 +9421,7 @@ static void quarter_pel_refinemnet_block(
             (int32_t)search_Index_x +
             (int32_t)buf2_stride[5] * (int32_t)search_Index_y;
         dist = (context_ptr->fractional_search_method == SSD_SEARCH)
-                   ? combined_averaging_ssd_func_ptr_array[asm_type](
+                   ? combined_averaging_ssd(
                          &(context_ptr->sb_buffer[src_block_index]),
                          BLOCK_SIZE_64,
                          buf1[5] + search_region_Index1,
@@ -9483,7 +9483,7 @@ static void quarter_pel_refinemnet_block(
             (int32_t)search_Index_x +
             (int32_t)buf2_stride[6] * (int32_t)search_Index_y;
         dist = (context_ptr->fractional_search_method == SSD_SEARCH)
-                   ? combined_averaging_ssd_func_ptr_array[asm_type](
+                   ? combined_averaging_ssd(
                          &(context_ptr->sb_buffer[src_block_index]),
                          BLOCK_SIZE_64,
                          buf1[6] + search_region_Index1,
@@ -9545,7 +9545,7 @@ static void quarter_pel_refinemnet_block(
             (int32_t)search_Index_x +
             (int32_t)buf2_stride[7] * (int32_t)search_Index_y;
         dist = (context_ptr->fractional_search_method == SSD_SEARCH)
-                   ? combined_averaging_ssd_func_ptr_array[asm_type](
+                   ? combined_averaging_ssd(
                          &(context_ptr->sb_buffer[src_block_index]),
                          BLOCK_SIZE_64,
                          buf1[7] + search_region_Index1,
