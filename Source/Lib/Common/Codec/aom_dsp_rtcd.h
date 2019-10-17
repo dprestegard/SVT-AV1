@@ -2623,6 +2623,7 @@ extern "C" {
 
     void eb_av1_txb_init_levels_c(const TranLow *const coeff, const int32_t width, const int32_t height, uint8_t *const levels);
     void eb_av1_txb_init_levels_avx2(const TranLow *const coeff, const int32_t width, const int32_t height, uint8_t *const levels);
+    void eb_av1_txb_init_levels_avx512(const TranLow *const coeff, const int32_t width, const int32_t height, uint8_t *const levels);
     RTCD_EXTERN void(*eb_av1_txb_init_levels)(const TranLow *const coeff, const int32_t width, const int32_t height, uint8_t *const levels);
 
     void av1_get_gradient_hist_c(const uint8_t *src, int src_stride, int rows, int cols, uint64_t *hist);
@@ -2985,8 +2986,6 @@ extern "C" {
         aom_highbd_blend_a64_vmask = aom_highbd_blend_a64_vmask_c;
         if (flags & HAS_SSE4_1) aom_highbd_blend_a64_vmask = aom_highbd_blend_a64_vmask_sse4_1;
 
-        eb_av1_txb_init_levels = eb_av1_txb_init_levels_c;
-        if (flags & HAS_AVX2) eb_av1_txb_init_levels = eb_av1_txb_init_levels_avx2;
     eb_aom_paeth_predictor_16x16 = eb_aom_paeth_predictor_16x16_c;
     if (flags & HAS_SSSE3) eb_aom_paeth_predictor_16x16 = eb_aom_paeth_predictor_16x16_ssse3;
     if (flags & HAS_AVX2) eb_aom_paeth_predictor_16x16 = eb_aom_paeth_predictor_16x16_avx2;
@@ -3510,6 +3509,7 @@ extern "C" {
         eb_aom_sad128x128x4d = eb_aom_sad128x128x4d_avx512;
         eb_aom_sad128x64 = eb_aom_sad128x64_avx512;
         eb_aom_sad128x64x4d = eb_aom_sad128x64x4d_avx512;
+        eb_av1_txb_init_levels = eb_av1_txb_init_levels_avx512;
 #else
         eb_aom_sad64x128 = eb_aom_sad64x128_c;
         if (flags & HAS_AVX2) eb_aom_sad64x128 = eb_aom_sad64x128_avx2;
@@ -3527,6 +3527,8 @@ extern "C" {
         if (flags & HAS_AVX2) eb_aom_sad128x64 = eb_aom_sad128x64_avx2;
         eb_aom_sad128x64x4d = eb_aom_sad128x64x4d_c;
         if (flags & HAS_AVX2) eb_aom_sad128x64x4d = eb_aom_sad128x64x4d_avx2;
+        eb_av1_txb_init_levels = eb_av1_txb_init_levels_c;
+        if (flags & HAS_AVX2) eb_av1_txb_init_levels = eb_av1_txb_init_levels_avx2;
 #endif // !NON_AVX512_SUPPORT
 
 //VARIANCE

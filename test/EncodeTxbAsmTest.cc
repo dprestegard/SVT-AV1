@@ -201,13 +201,12 @@ class EncodeTxbInitLevelTest
                   const bool is_speed) {
         const int width = get_txb_wide((TxSize)tx_size);
         const int height = get_txb_high((TxSize)tx_size);
+        const uint64_t num_loop =
+            is_speed ? (50000000000 / (width * height)) : 1;
         double time_c, time_o;
         uint64_t start_time_seconds, start_time_useconds;
         uint64_t middle_time_seconds, middle_time_useconds;
         uint64_t finish_time_seconds, finish_time_useconds;
-        uint64_t num_loop;
-
-        num_loop = is_speed ? (1000000000 / (width * height)) : 1;
 
         ASSERT_NE(rnd_, nullptr) << "Fail to create SVTRandom";
 
@@ -260,7 +259,7 @@ class EncodeTxbInitLevelTest
         const int height = get_txb_high((TxSize)tx_size);
 
         // make output different by default
-        memset(levels_buf_test_, 127, sizeof(levels_buf_test_));
+        memset(levels_buf_test_, 111, sizeof(levels_buf_test_));
         memset(levels_buf_ref_, 128, sizeof(levels_buf_test_));
 
         // fill the input buffer with random
@@ -298,4 +297,11 @@ INSTANTIATE_TEST_CASE_P(
     Entropy, EncodeTxbInitLevelTest,
     ::testing::Combine(::testing::Values(&eb_av1_txb_init_levels_avx2),
                        ::testing::Range(0, static_cast<int>(TX_SIZES_ALL), 1)));
+
+#ifndef NON_AVX512_SUPPORT
+INSTANTIATE_TEST_CASE_P(
+    EntropyAVX512, EncodeTxbInitLevelTest,
+    ::testing::Combine(::testing::Values(&eb_av1_txb_init_levels_avx512),
+                       ::testing::Range(0, static_cast<int>(TX_SIZES_ALL), 1)));
+#endif
 }  // namespace
