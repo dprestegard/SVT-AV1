@@ -8,7 +8,6 @@
 
 #include <immintrin.h>
 #include "EbDefinitions.h"
-#include "EbMemory_AVX2.h"
 #include "EbPictureOperators_SSE2.h"
 
 #ifdef __cplusplus
