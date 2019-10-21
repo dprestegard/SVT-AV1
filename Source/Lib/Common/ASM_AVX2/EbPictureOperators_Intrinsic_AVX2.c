@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <immintrin.h>
 #include "EbPictureOperators_AVX2.h"
+#include "EbPictureOperators_Inline_AVX2.h"
 #include "EbPictureOperators_SSE2.h"
 #include "EbMemory_AVX2.h"
 #include "synonyms.h"
