@@ -3,8 +3,9 @@
 * SPDX - License - Identifier: BSD - 2 - Clause - Patent
 */
 
-#include "EbCombinedAveragingSAD_Intrinsic_AVX2.h"
 #include "immintrin.h"
+#include "EbCombinedAveragingSAD_Inline_AVX2.h"
+#include "EbCombinedAveragingSAD_Intrinsic_AVX2.h"
 #include "EbMemory_AVX2.h"
 #include "EbMemory_SSE4_1.h"
 
