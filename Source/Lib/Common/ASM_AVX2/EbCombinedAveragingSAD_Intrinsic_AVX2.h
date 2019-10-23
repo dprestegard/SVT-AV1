@@ -5,9 +5,7 @@
 #ifndef EbCombinedAveragingSAD_AVX2_h
 #define EbCombinedAveragingSAD_AVX2_h
 
-#include "immintrin.h"
 #include "EbDefinitions.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

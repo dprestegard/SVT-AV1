@@ -107,17 +107,6 @@ extern "C" {
         uint32_t  *p_best_mv64x64,
         uint32_t   mv);
 
-    typedef uint32_t(*CombinedAveragingSsd)(
-        uint8_t   *src,
-        ptrdiff_t  src_stride,
-        uint8_t   *ref1,
-        ptrdiff_t  ref1_stride,
-        uint8_t   *ref2,
-        ptrdiff_t  ref2_stride,
-        uint32_t   height,
-        uint32_t   width
-        );
-
     /***************************************
     * Function Tables
     ***************************************/
