@@ -37,9 +37,10 @@ extern "C" {
    rate estimation is changed for I frame + enabled sc for P (rate estimation
    is a result changed for P frames)
 */
-#define PAL_SUP     1
+#define PAL_SUP                      1 //Palette prediction support.
+#if PAL_SUP
 #define PAL_CLASS   1
-
+#endif
 
 #define FIX_ALTREF                   1 // Address ALTREF mismatch between rtime-m0-test and master: fixed actual_future_pics derivation, shut padding of the central frame, fixed end past frame index prior to window shrinking
 #define FIX_NEAREST_NEW              1 // Address NEAREST_NEW mismatch between rtime-m0-test and master: fixed injection and fixed settings
@@ -2328,6 +2329,7 @@ typedef enum EbAsm
 } EbAsm;
 
 #if PAL_SUP
+#define  MAX_PAL_CAND   14
 typedef struct {
     // Value of base colors for Y, U, and V
     uint16_t palette_colors[3 * PALETTE_MAX_SIZE];

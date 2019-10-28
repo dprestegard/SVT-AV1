@@ -13,11 +13,6 @@
 #include <stdint.h>
 #include <string.h>
 
-//#include "av1/encoder/palette.h"
-//#include "av1/encoder/random.h"
-
-
-
 #ifndef AV1_K_MEANS_DIM
 #error "This template requires AV1_K_MEANS_DIM to be defined"
 #endif

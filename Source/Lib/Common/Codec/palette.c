@@ -11,10 +11,7 @@
 
 #include <math.h>
 #include <stdlib.h>
-
-//#include "av1/encoder/cost.h"
 #include "EbDefinitions.h"
-//#include "av1/encoder/random.h"
 #include "EbModeDecisionProcess.h"
 
 #if PAL_SUP

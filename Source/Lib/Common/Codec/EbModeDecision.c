@@ -5422,14 +5422,7 @@ void  inject_palette_candidates(
     EbBool                    disable_cfl_flag = (MAX(context_ptr->blk_geom->bheight, context_ptr->blk_geom->bwidth) > 32) ? EB_TRUE : EB_FALSE;
     uint32_t cand_i;
     uint32_t tot_palette_cands = 0;
-    PALETTE_INFO    palette_cand_array[14]; //14 why??  add as macro
-
-    for(int cd=0;cd<14;cd++)
-        palette_cand_array[cd].color_idx_map = malloc(64 * 64);
-
-   // if (context_ptr->cu_origin_x == 32 && context_ptr->cu_origin_y == 32 && context_ptr->blk_geom->blkidx_mds == 16)
-   //     printf("NOOOPALLLL");
-
+    PALETTE_INFO    *palette_cand_array = context_ptr->palette_cand_array;
 
     search_palette_luma(
         picture_control_set_ptr,
@@ -5437,16 +5430,11 @@ void  inject_palette_candidates(
         palette_cand_array,
         &tot_palette_cands);
 
-
     for (cand_i = 0; cand_i < tot_palette_cands; ++cand_i) {
 
         palette_cand_array[cand_i].pmi.palette_size[1] = 0;
-#if 1
         memcpy(candidateArray[canTotalCnt].palette_info.color_idx_map, palette_cand_array[cand_i].color_idx_map, 64 * 64);
         memcpy(&candidateArray[canTotalCnt].palette_info.pmi, &palette_cand_array[cand_i].pmi, sizeof(PALETTE_MODE_INFO));
-#else
-        memcpy(&candidateArray[canTotalCnt].palette_info, &palette_cand_array[cand_i], sizeof(PALETTE_INFO));
-#endif
         assert(palette_cand_array[cand_i].pmi.palette_size[0] < 9);
         //to re check these fields
         candidateArray[canTotalCnt].type = INTRA_MODE;
@@ -5513,16 +5501,8 @@ void  inject_palette_candidates(
         candidateArray[canTotalCnt].ref_frame_type = INTRA_FRAME;
         candidateArray[canTotalCnt].pred_mode = (PredictionMode)DC_PRED;
         candidateArray[canTotalCnt].motion_mode = SIMPLE_TRANSLATION;
-
-
-        //-----------------------------------------------------
         INCRMENT_CAND_TOTAL_COUNT(canTotalCnt);
-
     }
-
-
-    for (int cd = 0; cd < 14; cd++)
-        free(palette_cand_array[cd].color_idx_map);
 
     // update the total number of candidates injected
     (*candidateTotalCnt) = canTotalCnt;
