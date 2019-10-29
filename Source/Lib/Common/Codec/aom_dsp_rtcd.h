@@ -257,6 +257,12 @@ extern "C" {
     uint64_t spatial_full_distortion_kernel_avx2(uint8_t *input, uint32_t input_offset, uint32_t input_stride, uint8_t *recon, uint32_t recon_offset, uint32_t recon_stride, uint32_t area_width, uint32_t area_height);
     uint64_t spatial_full_distortion_kernel_avx512(uint8_t *input, uint32_t input_offset, uint32_t input_stride, uint8_t *recon, uint32_t recon_offset, uint32_t recon_stride, uint32_t area_width, uint32_t area_height);
 
+#if PREDICT_NSQ_SHAPE
+    uint64_t spatial_full_distortion_helper(uint8_t  *input, uint32_t input_offset, uint32_t  input_stride, uint8_t  *recon, uint32_t recon_offset, uint32_t  recon_stride, uint32_t  area_width, uint32_t  area_height, uint8_t  choice);
+    uint64_t spatial_full_distortion_avx2_helper(uint8_t  *input, uint32_t input_offset, uint32_t  input_stride, uint8_t  *recon, uint32_t recon_offset, uint32_t  recon_stride, uint32_t  area_width, uint32_t  area_height, uint8_t  choice);
+    RTCD_EXTERN uint64_t(*spatial_full_distortion)(uint8_t  *input, uint32_t input_offset, uint32_t  input_stride, uint8_t  *recon, uint32_t recon_offset, uint32_t  recon_stride, uint32_t  area_width, uint32_t  area_height, uint8_t  choice);
+#endif
+
     typedef uint64_t(*EbSpatialFullDistType)(
         uint8_t   *input,
         uint32_t   input_offset,
@@ -276,6 +282,7 @@ extern "C" {
 
     int64_t eb_av1_lowbd_pixel_proj_error_c(const uint8_t *src8, int32_t width, int32_t height, int32_t src_stride, const uint8_t *dat8, int32_t dat_stride, int32_t *flt0, int32_t flt0_stride, int32_t *flt1, int32_t flt1_stride, int32_t xq[2], const SgrParamsType *params);
     int64_t eb_av1_lowbd_pixel_proj_error_avx2(const uint8_t *src8, int32_t width, int32_t height, int32_t src_stride, const uint8_t *dat8, int32_t dat_stride, int32_t *flt0, int32_t flt0_stride, int32_t *flt1, int32_t flt1_stride, int32_t xq[2], const SgrParamsType *params);
+    int64_t eb_av1_lowbd_pixel_proj_error_avx512(const uint8_t *src8, int32_t width, int32_t height, int32_t src_stride, const uint8_t *dat8, int32_t dat_stride, int32_t *flt0, int32_t flt0_stride, int32_t *flt1, int32_t flt1_stride, int32_t xq[2], const SgrParamsType *params);
     RTCD_EXTERN int64_t(*eb_av1_lowbd_pixel_proj_error)(const uint8_t *src8, int32_t width, int32_t height, int32_t src_stride, const uint8_t *dat8, int32_t dat_stride, int32_t *flt0, int32_t flt0_stride, int32_t *flt1, int32_t flt1_stride, int32_t xq[2], const SgrParamsType *params);
 
     int64_t eb_av1_highbd_pixel_proj_error_c(const uint8_t *src8, int32_t width, int32_t height, int32_t src_stride, const uint8_t *dat8, int32_t dat_stride, int32_t *flt0, int32_t flt0_stride, int32_t *flt1, int32_t flt1_stride, int32_t xq[2], const SgrParamsType *params);
@@ -646,8 +653,8 @@ extern "C" {
     void eb_av1_quantize_fp_64x64_avx2(const TranLow *coeff_ptr, intptr_t n_coeffs, const int16_t *zbin_ptr, const int16_t *round_ptr, const int16_t *quant_ptr, const int16_t *quant_shift_ptr, TranLow *qcoeff_ptr, TranLow *dqcoeff_ptr, const int16_t *dequant_ptr, uint16_t *eob_ptr, const int16_t *scan, const int16_t *iscan);
     RTCD_EXTERN void(*eb_av1_quantize_fp_64x64)(const TranLow *coeff_ptr, intptr_t n_coeffs, const int16_t *zbin_ptr, const int16_t *round_ptr, const int16_t *quant_ptr, const int16_t *quant_shift_ptr, TranLow *qcoeff_ptr, TranLow *dqcoeff_ptr, const int16_t *dequant_ptr, uint16_t *eob_ptr, const int16_t *scan, const int16_t *iscan);
 
-    //uint32_t eb_aom_highbd_8_mse16x16_c(const uint8_t *src_ptr, int32_t  source_stride, const uint8_t *ref_ptr, int32_t  recon_stride, uint32_t *sse);
-    void      eb_aom_highbd_8_mse16x16_sse2(const uint8_t *src_ptr, int32_t  source_stride, const uint8_t *ref_ptr, int32_t  recon_stride, uint32_t *sse);
+    void eb_aom_highbd_8_mse16x16_c(const uint8_t *src_ptr, int32_t  source_stride, const uint8_t *ref_ptr, int32_t  recon_stride, uint32_t *sse);
+    void eb_aom_highbd_8_mse16x16_sse2(const uint8_t *src_ptr, int32_t  source_stride, const uint8_t *ref_ptr, int32_t  recon_stride, uint32_t *sse);
     RTCD_EXTERN void(*eb_aom_highbd_8_mse16x16)(const uint8_t *src_ptr, int32_t  source_stride, const uint8_t *ref_ptr, int32_t  recon_stride, uint32_t *sse);
 
     void eb_av1_upsample_intra_edge_c(uint8_t *p, int32_t sz);
@@ -2086,18 +2093,22 @@ extern "C" {
     unsigned int eb_aom_variance128x128_avx2(const uint8_t *src_ptr, int source_stride, const uint8_t *ref_ptr, int ref_stride, unsigned int *sse);
     RTCD_EXTERN unsigned int(*eb_aom_variance128x128)(const uint8_t *src_ptr, int source_stride, const uint8_t *ref_ptr, int ref_stride, unsigned int *sse);
 
+    void eb_aom_ifft16x16_float_c(const float *input, float *temp, float *output);
     void eb_aom_ifft16x16_float_avx2(const float *input, float *temp, float *output);
     RTCD_EXTERN void(*eb_aom_ifft16x16_float)(const float *input, float *temp, float *output);
 
     void eb_aom_ifft2x2_float_c(const float *input, float *temp, float *output);
     RTCD_EXTERN void(*eb_aom_ifft2x2_float)(const float *input, float *temp, float *output);
 
+    void eb_aom_ifft32x32_float_c(const float *input, float *temp, float *output);
     void eb_aom_ifft32x32_float_avx2(const float *input, float *temp, float *output);
     RTCD_EXTERN void(*eb_aom_ifft32x32_float)(const float *input, float *temp, float *output);
 
+    void eb_aom_ifft4x4_float_c(const float *input, float *temp, float *output);
     void eb_aom_ifft4x4_float_sse2(const float *input, float *temp, float *output);
     RTCD_EXTERN void(*eb_aom_ifft4x4_float)(const float *input, float *temp, float *output);
 
+    void eb_aom_ifft8x8_float_c(const float *input, float *temp, float *output);
     void eb_aom_ifft8x8_float_avx2(const float *input, float *temp, float *output);
     RTCD_EXTERN void(*eb_aom_ifft8x8_float)(const float *input, float *temp, float *output);
 
@@ -2890,6 +2901,9 @@ extern "C" {
     RTCD_EXTERN void(*eb_av1_highbd_dr_prediction_z3)(uint16_t *dst, ptrdiff_t stride, int32_t bw, int32_t bh, const uint16_t *above, const uint16_t *left, int32_t upsample_left, int32_t dx, int32_t dy, int32_t bd);
 
     void eb_av1_filter_intra_predictor_c(uint8_t *dst, ptrdiff_t stride, TxSize tx_size, const uint8_t *above, const uint8_t *left, int32_t mode);
+#if FILTER_INTRA_FLAG
+    void eb_av1_filter_intra_predictor_sse4_1(uint8_t *dst, ptrdiff_t stride, TxSize tx_size, const uint8_t *above, const uint8_t *left, int mode);
+#endif
     RTCD_EXTERN void (*eb_av1_filter_intra_predictor) (uint8_t *dst, ptrdiff_t stride, TxSize tx_size, const uint8_t *above, const uint8_t *left, int32_t mode);
 
     //void eb_av1_get_nz_map_contexts_c(const uint8_t *const levels, const int16_t *const scan, const uint16_t eob, const TxSize tx_size, const TxClass tx_class, int8_t *const coeff_contexts);
@@ -3028,6 +3042,11 @@ extern "C" {
         eb_compute_cdef_dist_8bit = compute_cdef_dist_8bit_c;
         if (flags & HAS_AVX2) eb_compute_cdef_dist_8bit = compute_cdef_dist_8bit_avx2;
 
+#if PREDICT_NSQ_SHAPE
+        spatial_full_distortion = spatial_full_distortion_helper;
+        if (flags & HAS_AVX2) spatial_full_distortion = spatial_full_distortion_avx2_helper;
+#endif
+
         eb_copy_rect8_8bit_to_16bit = eb_copy_rect8_8bit_to_16bit_c;
         if (flags & HAS_AVX2) eb_copy_rect8_8bit_to_16bit = eb_copy_rect8_8bit_to_16bit_avx2;
 
@@ -3045,7 +3064,6 @@ extern "C" {
 #endif
 
         eb_av1_lowbd_pixel_proj_error = eb_av1_lowbd_pixel_proj_error_c;
-        if (flags & HAS_AVX2) eb_av1_lowbd_pixel_proj_error = eb_av1_lowbd_pixel_proj_error_avx2;
         eb_av1_highbd_pixel_proj_error = eb_av1_highbd_pixel_proj_error_c;
         if (flags & HAS_AVX2) eb_av1_highbd_pixel_proj_error = eb_av1_highbd_pixel_proj_error_avx2;
         eb_av1_filter_intra_edge_high = eb_av1_filter_intra_edge_high_c;
@@ -3173,6 +3191,7 @@ extern "C" {
         eb_av1_inv_txfm2d_add_64x32 = eb_av1_inv_txfm2d_add_64x32_avx512;
         eb_av1_inv_txfm2d_add_16x32 = eb_av1_inv_txfm2d_add_16x32_avx512;
         eb_av1_inv_txfm2d_add_32x16 = eb_av1_inv_txfm2d_add_32x16_avx512;
+        eb_av1_lowbd_pixel_proj_error = eb_av1_lowbd_pixel_proj_error_avx512;
     }
 #else
         if (flags & HAS_AVX2) eb_av1_inv_txfm2d_add_16x16 = eb_av1_inv_txfm2d_add_16x16_avx2;
@@ -3184,7 +3203,7 @@ extern "C" {
         if (flags & HAS_AVX2) eb_av1_inv_txfm2d_add_64x32 = eb_av1_highbd_inv_txfm_add_avx2;
         if (flags & HAS_AVX2) eb_av1_inv_txfm2d_add_16x32 = eb_av1_highbd_inv_txfm_add_avx2;
         if (flags & HAS_AVX2) eb_av1_inv_txfm2d_add_32x16 = eb_av1_highbd_inv_txfm_add_avx2;
-
+        if (flags & HAS_AVX2) eb_av1_lowbd_pixel_proj_error = eb_av1_lowbd_pixel_proj_error_avx2;
 #endif
         eb_av1_inv_txfm_add = eb_av1_inv_txfm_add_c;
         if (flags & HAS_SSSE3) eb_av1_inv_txfm_add = eb_av1_inv_txfm_add_ssse3;
@@ -3202,7 +3221,7 @@ extern "C" {
         highbd_variance64 = highbd_variance64_c;
         if (flags & HAS_AVX2) highbd_variance64 = highbd_variance64_avx2;
 
-        //aom_highbd_8_mse16x16 = eb_aom_highbd_8_mse16x16_c;
+        eb_aom_highbd_8_mse16x16 = eb_aom_highbd_8_mse16x16_c;
         if (flags & HAS_SSE2) eb_aom_highbd_8_mse16x16 = eb_aom_highbd_8_mse16x16_sse2;
 
         eb_av1_upsample_intra_edge = eb_av1_upsample_intra_edge_c;
@@ -3212,6 +3231,9 @@ extern "C" {
         if (flags & HAS_AVX2) eb_av1_warp_affine = eb_av1_warp_affine_avx2;
 
         eb_av1_filter_intra_predictor = eb_av1_filter_intra_predictor_c;
+#if FILTER_INTRA_FLAG
+        if (flags & HAS_SSE4_1) eb_av1_filter_intra_predictor = eb_av1_filter_intra_predictor_sse4_1;
+#endif
 
         eb_aom_highbd_smooth_v_predictor_16x16 = eb_aom_highbd_smooth_v_predictor_16x16_c;
         if (flags & HAS_AVX2) eb_aom_highbd_smooth_v_predictor_16x16 = eb_aom_highbd_smooth_v_predictor_16x16_avx2;
@@ -4500,11 +4522,16 @@ extern "C" {
         eb_aom_fft8x8_float = eb_aom_fft8x8_float_c;
         if (flags & HAS_AVX2) eb_aom_fft8x8_float = eb_aom_fft8x8_float_avx2;
 
-        /*if (flags & HAS_AVX2)*/ eb_aom_ifft16x16_float = eb_aom_ifft16x16_float_avx2;
-        /*if (flags & HAS_AVX2)*/ eb_aom_ifft32x32_float = eb_aom_ifft32x32_float_avx2;
-        /*if (flags & HAS_AVX2)*/ eb_aom_ifft8x8_float = eb_aom_ifft8x8_float_avx2;
+		
+        eb_aom_ifft16x16_float = eb_aom_ifft16x16_float_c;
+        if (flags & HAS_AVX2) eb_aom_ifft16x16_float = eb_aom_ifft16x16_float_avx2;
+        eb_aom_ifft32x32_float = eb_aom_ifft32x32_float_c;
+        if (flags & HAS_AVX2) eb_aom_ifft32x32_float = eb_aom_ifft32x32_float_avx2;
+        eb_aom_ifft8x8_float = eb_aom_ifft8x8_float_c;
+        if (flags & HAS_AVX2) eb_aom_ifft8x8_float = eb_aom_ifft8x8_float_avx2;
         eb_aom_ifft2x2_float = eb_aom_ifft2x2_float_c;
-        /*if (flags & HAS_SSE2)*/ eb_aom_ifft4x4_float = eb_aom_ifft4x4_float_sse2;
+        eb_aom_ifft4x4_float = eb_aom_ifft4x4_float_c;
+        if (flags & HAS_SSE2) eb_aom_ifft4x4_float = eb_aom_ifft4x4_float_sse2;
         av1_get_gradient_hist = av1_get_gradient_hist_c;
         if (flags & HAS_AVX2) av1_get_gradient_hist = av1_get_gradient_hist_avx2;
     }

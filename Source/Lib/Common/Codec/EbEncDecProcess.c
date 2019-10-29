@@ -1126,6 +1126,9 @@ void PadRefAndSetFlags(
 
     // set up the Slice Type
     referenceObject->slice_type = picture_control_set_ptr->parent_pcs_ptr->slice_type;
+#if TWO_PASS
+    referenceObject->referenced_area_avg = picture_control_set_ptr->parent_pcs_ptr->referenced_area_avg;
+#endif
 }
 
 void CopyStatisticsToRefObject(
@@ -1330,6 +1333,32 @@ EbErrorType signal_derivation_enc_dec_kernel_oq(
 
     // Derive md_staging_mode
     //
+#if REMOVE_MD_STAGE_1
+    // MD_STAGING_MODE_0
+    // Default Parameters
+    //
+    // MD_STAGING_MODE_1
+    //  __________________________________________________________________________________________________________________
+    // |        | md_stage_0                  | md_stage_2                     | md_stage_3                              |
+    // |________|_____________________________|________________________________|_________________________________________|
+    // |CLASS_0 |Prediction for Luma & Chroma |T, Q, Q-1, T-1 for Luma Only    |T, Q, Q-1, T-1 or Luma & Chroma          |
+    // |CLASS_6 |                             |No RDOQ                         |RDOQ                                     |
+    // |        |                             |No Tx Type Search               |Tx Type Search                           |
+    // |        |                             |No Tx Size Search               |Tx Size Search                           |
+    // |        |                             |                                |CFL vs. Independent                      |
+    // |________|_____________________________|________________________________|_________________________________________|
+    // |CLASS_1 |Prediction for Luma Only     |T, Q, Q-1, T-1 for Luma Only    |T, Q, Q-1, T-1 for Luma & Chroma         |
+    // |CLASS_2 |No Interpolation Search      |No RDOQ                         |RDOQ                                     |
+    // |CLASS_3 |Bilinear Interpolation       |No Tx Type Search               |Tx Type Search                           |
+    // |CLASS_4 |                             |No Tx Size Search               |Tx Size Search                           |
+    // |CLASS_5 |                             |Interpolation Search            |                                         |
+    // |________|_____________________________|________________________________|_________________________________________|
+
+    if (picture_control_set_ptr->enc_mode <= ENC_M4)
+        context_ptr->md_staging_mode = MD_STAGING_MODE_1;
+    else
+        context_ptr->md_staging_mode = MD_STAGING_MODE_0;
+#else
     // MD_STAGING_MODE_1
     //  _______________________________________________________________________________________________________________________________________________
     // |        | md_stage_0                  | md_stage_1                  | md_stage_2                     | md_stage_3                              |
@@ -1414,7 +1443,7 @@ EbErrorType signal_derivation_enc_dec_kernel_oq(
         context_ptr->md_staging_mode = MD_STAGING_MODE_3;
     else
         context_ptr->md_staging_mode = MD_STAGING_MODE_0; // Default structure = fast loop + full loop = md_stage_0 + md_stage_3
-
+#endif
     // Combine MD Class1&2
     // 0                    OFF
     // 1                    ON
@@ -1497,7 +1526,7 @@ EbErrorType signal_derivation_enc_dec_kernel_oq(
     if (MR_MODE)
         context_ptr->md_exit_th = 0;
     else
-        context_ptr->md_exit_th = 10;
+        context_ptr->md_exit_th = (picture_control_set_ptr->parent_pcs_ptr->sc_content_detected) ? 10 : 18;
 
     // Derive distortion-based md_stage_0_count proning
     if (MR_MODE)
