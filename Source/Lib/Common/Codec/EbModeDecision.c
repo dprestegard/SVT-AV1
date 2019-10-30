@@ -5413,11 +5413,11 @@ void  search_palette_luma(
 void  inject_palette_candidates(
     PictureControlSet            *picture_control_set_ptr,
     ModeDecisionContext          *context_ptr,
-    uint32_t                       *candidateTotalCnt) {
+    uint32_t                       *candidate_total_cnt) {
 
 
 
-    uint32_t                  canTotalCnt = *candidateTotalCnt;
+    uint32_t                  can_total_cnt = *candidate_total_cnt;
     ModeDecisionCandidate    *candidateArray = context_ptr->fast_candidate_array;
     EbBool                    disable_cfl_flag = (MAX(context_ptr->blk_geom->bheight, context_ptr->blk_geom->bwidth) > 32) ? EB_TRUE : EB_FALSE;
     uint32_t cand_i;
@@ -5433,64 +5433,64 @@ void  inject_palette_candidates(
     for (cand_i = 0; cand_i < tot_palette_cands; ++cand_i) {
 
         palette_cand_array[cand_i].pmi.palette_size[1] = 0;
-        memcpy(candidateArray[canTotalCnt].palette_info.color_idx_map, palette_cand_array[cand_i].color_idx_map, 64 * 64);
-        memcpy(&candidateArray[canTotalCnt].palette_info.pmi, &palette_cand_array[cand_i].pmi, sizeof(PaletteModeInfo));
+        memcpy(candidateArray[can_total_cnt].palette_info.color_idx_map, palette_cand_array[cand_i].color_idx_map, 64 * 64);
+        memcpy(&candidateArray[can_total_cnt].palette_info.pmi, &palette_cand_array[cand_i].pmi, sizeof(PaletteModeInfo));
         assert(palette_cand_array[cand_i].pmi.palette_size[0] < 9);
         //to re check these fields
-        candidateArray[canTotalCnt].type = INTRA_MODE;
-        candidateArray[canTotalCnt].intra_luma_mode = DC_PRED;
-        candidateArray[canTotalCnt].distortion_ready = 0;
-        candidateArray[canTotalCnt].use_intrabc = 0;
+        candidateArray[can_total_cnt].type = INTRA_MODE;
+        candidateArray[can_total_cnt].intra_luma_mode = DC_PRED;
+        candidateArray[can_total_cnt].distortion_ready = 0;
+        candidateArray[can_total_cnt].use_intrabc = 0;
 
-        candidateArray[canTotalCnt].filter_intra_mode = FILTER_INTRA_MODES;
+        candidateArray[can_total_cnt].filter_intra_mode = FILTER_INTRA_MODES;
 
-        candidateArray[canTotalCnt].is_directional_mode_flag = 0;
+        candidateArray[can_total_cnt].is_directional_mode_flag = 0;
 
-        candidateArray[canTotalCnt].angle_delta[PLANE_TYPE_Y] = 0;
+        candidateArray[can_total_cnt].angle_delta[PLANE_TYPE_Y] = 0;
 
         // Search the best independent intra chroma mode
         if (context_ptr->chroma_level == CHROMA_MODE_0) {
-            candidateArray[canTotalCnt].intra_chroma_mode = disable_cfl_flag ?
-                context_ptr->best_uv_mode[DC_PRED][MAX_ANGLE_DELTA + candidateArray[canTotalCnt].angle_delta[PLANE_TYPE_Y]] :
+            candidateArray[can_total_cnt].intra_chroma_mode = disable_cfl_flag ?
+                context_ptr->best_uv_mode[DC_PRED][MAX_ANGLE_DELTA + candidateArray[can_total_cnt].angle_delta[PLANE_TYPE_Y]] :
                 UV_CFL_PRED;
 
-            candidateArray[canTotalCnt].angle_delta[PLANE_TYPE_UV] = disable_cfl_flag ?
-                context_ptr->best_uv_angle[candidateArray[canTotalCnt].intra_luma_mode][MAX_ANGLE_DELTA + candidateArray[canTotalCnt].angle_delta[PLANE_TYPE_Y]] : 0;
-            candidateArray[canTotalCnt].is_directional_chroma_mode_flag = disable_cfl_flag ?
-                (uint8_t)av1_is_directional_mode((PredictionMode)(context_ptr->best_uv_mode[candidateArray[canTotalCnt].intra_luma_mode][MAX_ANGLE_DELTA + candidateArray[canTotalCnt].angle_delta[PLANE_TYPE_Y]])) : 0;
+            candidateArray[can_total_cnt].angle_delta[PLANE_TYPE_UV] = disable_cfl_flag ?
+                context_ptr->best_uv_angle[candidateArray[can_total_cnt].intra_luma_mode][MAX_ANGLE_DELTA + candidateArray[can_total_cnt].angle_delta[PLANE_TYPE_Y]] : 0;
+            candidateArray[can_total_cnt].is_directional_chroma_mode_flag = disable_cfl_flag ?
+                (uint8_t)av1_is_directional_mode((PredictionMode)(context_ptr->best_uv_mode[candidateArray[can_total_cnt].intra_luma_mode][MAX_ANGLE_DELTA + candidateArray[can_total_cnt].angle_delta[PLANE_TYPE_Y]])) : 0;
 
         }
         else {
             // Hsan/Omar: why the restriction below ? (i.e. disable_ang_uv)
             const int32_t disable_ang_uv = (context_ptr->blk_geom->bwidth == 4 || context_ptr->blk_geom->bheight == 4) && context_ptr->blk_geom->has_uv ? 1 : 0;
-            candidateArray[canTotalCnt].intra_chroma_mode = disable_cfl_flag ?
+            candidateArray[can_total_cnt].intra_chroma_mode = disable_cfl_flag ?
                 intra_luma_to_chroma[DC_PRED] :
                 (context_ptr->chroma_level == CHROMA_MODE_1) ?
                 UV_CFL_PRED :
                 UV_DC_PRED;
 
-            candidateArray[canTotalCnt].intra_chroma_mode = disable_ang_uv && av1_is_directional_mode(candidateArray[canTotalCnt].intra_chroma_mode) ?
-                UV_DC_PRED : candidateArray[canTotalCnt].intra_chroma_mode;
+            candidateArray[can_total_cnt].intra_chroma_mode = disable_ang_uv && av1_is_directional_mode(candidateArray[can_total_cnt].intra_chroma_mode) ?
+                UV_DC_PRED : candidateArray[can_total_cnt].intra_chroma_mode;
 
-            candidateArray[canTotalCnt].is_directional_chroma_mode_flag = (uint8_t)av1_is_directional_mode((PredictionMode)candidateArray[canTotalCnt].intra_chroma_mode);
-            candidateArray[canTotalCnt].angle_delta[PLANE_TYPE_UV] = 0;
+            candidateArray[can_total_cnt].is_directional_chroma_mode_flag = (uint8_t)av1_is_directional_mode((PredictionMode)candidateArray[can_total_cnt].intra_chroma_mode);
+            candidateArray[can_total_cnt].angle_delta[PLANE_TYPE_UV] = 0;
 
         }
 
-        candidateArray[canTotalCnt].cfl_alpha_signs = 0;
-        candidateArray[canTotalCnt].cfl_alpha_idx = 0;
-        candidateArray[canTotalCnt].transform_type[0] = DCT_DCT;
+        candidateArray[can_total_cnt].cfl_alpha_signs = 0;
+        candidateArray[can_total_cnt].cfl_alpha_idx = 0;
+        candidateArray[can_total_cnt].transform_type[0] = DCT_DCT;
 
-        if (candidateArray[canTotalCnt].intra_chroma_mode == UV_CFL_PRED)
-            candidateArray[canTotalCnt].transform_type_uv = DCT_DCT;
+        if (candidateArray[can_total_cnt].intra_chroma_mode == UV_CFL_PRED)
+            candidateArray[can_total_cnt].transform_type_uv = DCT_DCT;
         else
-            candidateArray[canTotalCnt].transform_type_uv =
+            candidateArray[can_total_cnt].transform_type_uv =
 
             av1_get_tx_type(
                 context_ptr->blk_geom->bsize,
                 0,
-                (PredictionMode)candidateArray[canTotalCnt].intra_luma_mode,
-                (UvPredictionMode)candidateArray[canTotalCnt].intra_chroma_mode,
+                (PredictionMode)candidateArray[can_total_cnt].intra_luma_mode,
+                (UvPredictionMode)candidateArray[can_total_cnt].intra_chroma_mode,
                 PLANE_TYPE_UV,
                 0,
                 0,
@@ -5498,14 +5498,14 @@ void  inject_palette_candidates(
                 context_ptr->blk_geom->txsize_uv[0][0],
                 picture_control_set_ptr->parent_pcs_ptr->frm_hdr.reduced_tx_set);
 
-        candidateArray[canTotalCnt].ref_frame_type = INTRA_FRAME;
-        candidateArray[canTotalCnt].pred_mode = (PredictionMode)DC_PRED;
-        candidateArray[canTotalCnt].motion_mode = SIMPLE_TRANSLATION;
-        INCRMENT_CAND_TOTAL_COUNT(canTotalCnt);
+        candidateArray[can_total_cnt].ref_frame_type = INTRA_FRAME;
+        candidateArray[can_total_cnt].pred_mode = (PredictionMode)DC_PRED;
+        candidateArray[can_total_cnt].motion_mode = SIMPLE_TRANSLATION;
+        INCRMENT_CAND_TOTAL_COUNT(can_total_cnt);
     }
 
     // update the total number of candidates injected
-    (*candidateTotalCnt) = canTotalCnt;
+    (*candidate_total_cnt) = can_total_cnt;
 
     return;
 }

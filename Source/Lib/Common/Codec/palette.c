@@ -568,28 +568,28 @@ int av1_count_colors_highbd(uint16_t *src, int stride, int rows, int cols,
      ColorCost color_cost;
  } Av1ColorMapParam;
 
- static void get_palette_params(FRAME_CONTEXT *frameContext, CodingUnit*cu_ptr, int plane,
+ static void get_palette_params(FRAME_CONTEXT *frame_context, CodingUnit*cu_ptr, int plane,
      BlockSize bsize, Av1ColorMapParam *params) {
      const MacroBlockD *const xd = cu_ptr->av1xd;
      MbModeInfo * mbmi = &(xd->mi[0]->mbmi);
      const PaletteModeInfo *const pmi = &mbmi->palette_mode_info;
      params->color_map = cu_ptr->palette_info.color_idx_map;
-     params->map_cdf = plane ? frameContext->palette_uv_color_index_cdf
-         : frameContext->palette_y_color_index_cdf;
+     params->map_cdf = plane ? frame_context->palette_uv_color_index_cdf
+         : frame_context->palette_y_color_index_cdf;
      params->color_cost = NULL;
      params->n_colors = pmi->palette_size[plane];
      av1_get_block_dimensions(bsize, plane, xd, &params->plane_width, NULL,
          &params->rows, &params->cols);
  }
 
- static void get_color_map_params(FRAME_CONTEXT *frameContext, CodingUnit*cu_ptr , int plane,
+ static void get_color_map_params(FRAME_CONTEXT *frame_context, CodingUnit*cu_ptr , int plane,
      BlockSize bsize, TxSize tx_size,
      COLOR_MAP_TYPE type,
      Av1ColorMapParam *params) {
      (void)tx_size;
      memset(params, 0, sizeof(*params));
      switch (type) {
-     case PALETTE_MAP: get_palette_params(frameContext, cu_ptr, plane, bsize, params); break;
+     case PALETTE_MAP: get_palette_params(frame_context, cu_ptr, plane, bsize, params); break;
      default: assert(0 && "Invalid color map type"); return;
      }
  }
