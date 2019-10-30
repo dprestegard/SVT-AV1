@@ -1727,12 +1727,12 @@ void set_md_stage_counts(
     context_ptr->md_stage_2_count[CAND_CLASS_4] = context_ptr->bypass_md_stage_1[CAND_CLASS_4] ? context_ptr->md_stage_1_count[CAND_CLASS_4] : context_ptr->md_stage_2_count[CAND_CLASS_4];
     context_ptr->md_stage_2_count[CAND_CLASS_5] = context_ptr->bypass_md_stage_1[CAND_CLASS_5] ? context_ptr->md_stage_1_count[CAND_CLASS_5] : context_ptr->md_stage_2_count[CAND_CLASS_5];
     context_ptr->md_stage_2_count[CAND_CLASS_6] = context_ptr->bypass_md_stage_1[CAND_CLASS_6] ? context_ptr->md_stage_1_count[CAND_CLASS_6] : context_ptr->md_stage_2_count[CAND_CLASS_6];
-   
 
-#if PAL_CLASS 
-    //TODO: use actual number of stages on the setting section and update using the following logic.      
+
+#if PAL_CLASS
+    //TODO: use actual number of stages on the setting section and update using the following logic.
     // stage1_cand_count[CAND_CLASS_i] = bypass_stage1 ? stage2_cand_count[CAND_CLASS_i] : stage1_cand_count[CAND_CLASS_i];
-    context_ptr->md_stage_2_count[CAND_CLASS_7] = context_ptr->bypass_md_stage_1[CAND_CLASS_7] ? context_ptr->md_stage_1_count[CAND_CLASS_7] : context_ptr->md_stage_2_count[CAND_CLASS_7];   
+    context_ptr->md_stage_2_count[CAND_CLASS_7] = context_ptr->bypass_md_stage_1[CAND_CLASS_7] ? context_ptr->md_stage_1_count[CAND_CLASS_7] : context_ptr->md_stage_2_count[CAND_CLASS_7];
 #endif
 
     // Step 4: zero-out count for CAND_CLASS_3 if CAND_CLASS_1 and CAND_CLASS_2 are merged (i.e. shift to the left)
@@ -2424,7 +2424,7 @@ void md_stage_0(
 #if FILTER_INTRA_FLAG
 #if REMOVE_MD_STAGE_1
 #if PAL_CLASS
-    context_ptr->md_staging_skip_inter_chroma_pred = (context_ptr->md_staging_mode == MD_STAGING_MODE_1 && 
+    context_ptr->md_staging_skip_inter_chroma_pred = (context_ptr->md_staging_mode == MD_STAGING_MODE_1 &&
         context_ptr->target_class != CAND_CLASS_0 && context_ptr->target_class != CAND_CLASS_6 && context_ptr->target_class != CAND_CLASS_7) ? EB_TRUE : EB_FALSE;
 #else
     context_ptr->md_staging_skip_inter_chroma_pred = (context_ptr->md_staging_mode == MD_STAGING_MODE_1 && context_ptr->target_class != CAND_CLASS_0 && context_ptr->target_class != CAND_CLASS_6) ? EB_TRUE : EB_FALSE;
@@ -6228,7 +6228,7 @@ void move_cu_data(
 #if PAL_SUP
     dst_cu->palette_info.color_idx_map = (uint8_t *)malloc(MAX_PALETTE_SQUARE);
     memcpy(dst_cu->palette_info.color_idx_map, src_cu->palette_info.color_idx_map, MAX_PALETTE_SQUARE);
-    memcpy(&dst_cu->palette_info.pmi, &src_cu->palette_info.pmi, sizeof(PALETTE_MODE_INFO));
+    memcpy(&dst_cu->palette_info.pmi, &src_cu->palette_info.pmi, sizeof(PaletteModeInfo));
 #endif
 #if OBMC_FLAG
     dst_cu->interp_filters = src_cu->interp_filters;
@@ -6349,7 +6349,7 @@ void move_cu_data_redund(
 
 #if PAL_SUP
     memcpy(dst_cu->palette_info.color_idx_map, src_cu->palette_info.color_idx_map, MAX_PALETTE_SQUARE);
-    memcpy(&dst_cu->palette_info.pmi, &src_cu->palette_info.pmi, sizeof(PALETTE_MODE_INFO));
+    memcpy(&dst_cu->palette_info.pmi, &src_cu->palette_info.pmi, sizeof(PaletteModeInfo));
 #endif
 #if OBMC_FLAG
     dst_cu->interp_filters = src_cu->interp_filters;

@@ -1008,7 +1008,7 @@ EbErrorType signal_derivation_multi_processes_oq(
     }
 
 #if PAL_SUP
-  
+
    /*Palette Modes:
         0:OFF
         1:Slow    NIC=7/4/4

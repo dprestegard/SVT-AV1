@@ -156,7 +156,7 @@ extern "C" {
         MvUnit                        mv_unit;
 #if PAL_SUP
         PALETTE_BUFFER            palette_buffer;
-        PALETTE_INFO              palette_cand_array[MAX_PAL_CAND];
+        PaletteInfo              palette_cand_array[MAX_PAL_CAND];
 #endif
         // Entropy Coder
         EntropyCoder                 *coeff_est_entropy_coder_ptr;

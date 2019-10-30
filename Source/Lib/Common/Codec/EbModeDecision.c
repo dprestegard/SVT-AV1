@@ -5407,7 +5407,7 @@ int svt_av1_allow_palette(int allow_palette,
 void  search_palette_luma(
     PictureControlSet            *picture_control_set_ptr,
     ModeDecisionContext          *context_ptr,
-    PALETTE_INFO                 *palette_cand,
+    PaletteInfo                 *palette_cand,
     uint32_t                     *tot_palette_cands);
 
 void  inject_palette_candidates(
@@ -5422,7 +5422,7 @@ void  inject_palette_candidates(
     EbBool                    disable_cfl_flag = (MAX(context_ptr->blk_geom->bheight, context_ptr->blk_geom->bwidth) > 32) ? EB_TRUE : EB_FALSE;
     uint32_t cand_i;
     uint32_t tot_palette_cands = 0;
-    PALETTE_INFO    *palette_cand_array = context_ptr->palette_cand_array;
+    PaletteInfo    *palette_cand_array = context_ptr->palette_cand_array;
 
     search_palette_luma(
         picture_control_set_ptr,
@@ -5434,7 +5434,7 @@ void  inject_palette_candidates(
 
         palette_cand_array[cand_i].pmi.palette_size[1] = 0;
         memcpy(candidateArray[canTotalCnt].palette_info.color_idx_map, palette_cand_array[cand_i].color_idx_map, 64 * 64);
-        memcpy(&candidateArray[canTotalCnt].palette_info.pmi, &palette_cand_array[cand_i].pmi, sizeof(PALETTE_MODE_INFO));
+        memcpy(&candidateArray[canTotalCnt].palette_info.pmi, &palette_cand_array[cand_i].pmi, sizeof(PaletteModeInfo));
         assert(palette_cand_array[cand_i].pmi.palette_size[0] < 9);
         //to re check these fields
         candidateArray[canTotalCnt].type = INTRA_MODE;
@@ -5854,7 +5854,7 @@ uint32_t product_full_mode_decision(
         if (cu_ptr->prediction_mode_flag == INTRA_MODE)
         {
             memcpy(cu_ptr->palette_info.color_idx_map, candidate_ptr->palette_info.color_idx_map, MAX_PALETTE_SQUARE);
-            memcpy(&cu_ptr->palette_info.pmi, &candidate_ptr->palette_info.pmi, sizeof(PALETTE_MODE_INFO));
+            memcpy(&cu_ptr->palette_info.pmi, &candidate_ptr->palette_info.pmi, sizeof(PaletteModeInfo));
         }
         else {
             cu_ptr->palette_info.pmi.palette_size[0] = cu_ptr->palette_info.pmi.palette_size[1] = 0;

@@ -2336,12 +2336,12 @@ typedef struct {
     // Number of base colors for Y (0) and UV (1)
     uint8_t palette_size[2];
 
-} PALETTE_MODE_INFO;
+} PaletteModeInfo;
 
 typedef struct {
-    PALETTE_MODE_INFO pmi;
+    PaletteModeInfo pmi;
     uint8_t  *color_idx_map;
-} PALETTE_INFO;
+} PaletteInfo;
 #endif
 /** The EB_NULL type is used to define the C style NULL pointer.
 */
